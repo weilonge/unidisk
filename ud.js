@@ -3,7 +3,7 @@
  * (C) 2013 Sean Lee (Wei-Lun Lee) <weilonge@gmail.com>
  **/
 
-var udUtility = require('./helper/udUtility');
+var udUtility = require('./helper/cmdWrapper');
 var path = require('path');
 
 function showHelp(exeName){
