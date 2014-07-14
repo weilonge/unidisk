@@ -1,9 +1,9 @@
 var curl = require('node-curl');
 var http = require('https');
 
-var XFR_ESTIMATING_MIN_SPEED = 20 * 1024;
-var XFR_ESTIMATING_MIN_TIME = 20;
-var XFR_CONNECTION_TIMEOUT = 3;
+var XFR_ESTIMATING_MIN_SPEED = 20 * 1024; // n bytes/sec
+var XFR_ESTIMATING_MIN_TIME = 20; // secs
+var XFR_CONNECTION_TIMEOUT = 3; // secs
 
 var PCS_HOSTNAME = "pcs.baidu.com";
 var PCS_HOSTNAME_D = "d.pcs.baidu.com";
@@ -32,16 +32,22 @@ exports._execute = function (options, cb){
 		POST: ( options.httpMethod === "POST" ? 1 : 0 ),
 		SSL_VERIFYPEER: 0
 	}, function(err){
-		var pcsRes = null; pcsReq = {
+		var errorOutput = null;
+		var response = {
+			queryPara: options,
 			uri: link,
-			errmsg: null
+			data: null
 		};
-		try {
-			pcsRes = JSON.parse(this.body);
-		} catch (e) {
-			pcsReq.errmsg = this.body;
+		if(err){
+			errorOutput = err;
+		}else{
+			try {
+				response.data = JSON.parse(this.body);
+			} catch (e) {
+				errorOutput = this.body;
+			}
 		}
-		cb(pcsReq, pcsRes);
+		cb(errorOutput, response);
 	});
 }
 
@@ -57,7 +63,18 @@ exports._download = function (options, cb){
 		SSL_VERIFYPEER: 0,
 		RANGE: '' + options.offset + '-' + ( options.offset + options.size - 1 )
 	}, function(err){
-		cb(err, this.body);
+		var errorOutput = null;
+		var response = {
+			queryPara: options,
+			uri: link,
+			data: null
+		};
+		if(err){
+			errorOutput = err;
+		}else{
+			response.data = this.body;
+		}
+		cb(errorOutput, response);
 	});
 }
 

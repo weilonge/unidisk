@@ -16,14 +16,14 @@ Example: " + exeName + " quota\n\
 	");
 }
 
-var cccb = function(req, data){
-	if( req && req.errmsg){
+var cccb = function(error, response){
+	if( error ){
 		console.error('== Error =====================');
-		console.error(req);
+		console.error(error);
 		console.error('==============================');
 	}else{
 		console.log('== Result ====================');
-		console.log(data);
+		console.log(response.data);
 		console.log('==============================');
 	}
 }
@@ -34,7 +34,8 @@ if( '--help' === process.argv[2] || '-h' === process.argv[2] ){
 }
 
 var ret = udUtility.invokeCommand(process.argv.slice(2), [
-	require('./clouddrive/pcs')
+	require('./clouddrive/pcs'),
+	require('./helper/udManager')
 ], 1, cccb);
 
 if( 0 !== ret ){
