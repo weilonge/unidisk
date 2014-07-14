@@ -33,7 +33,9 @@ if( '--help' === process.argv[2] || '-h' === process.argv[2] ){
 	return ;
 }
 
-var ret = udUtility.invokeCommand(process.argv.slice(2), cccb);
+var ret = udUtility.invokeCommand(process.argv.slice(2), [
+	require('./clouddrive/pcs')
+], 1, cccb);
 
 if( 0 !== ret ){
 	showHelp(path.basename(process.argv[1]));

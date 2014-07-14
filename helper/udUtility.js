@@ -2,21 +2,17 @@
  * (C) 2013 Sean Lee (Wei-Lun Lee) <weilonge@gmail.com>
  **/
 
-var udCore = require('../clouddrive/pcs');
-var async = require('async');
-
 // argv = [ cmd, p1, p2, ...]
-exports.invokeCommand = function (argv, cccb){
+exports.invokeCommand = function (argv, commandSet, ignoreArgNum, cb){
 	if( 1 > argv.length){
-		return "(1) Need more arguments. " + argv;
+		return "(1) Need more arguments.";
 	}
 	var cmd = argv[0];
 	var funcP = null, funcS = null;
-	var cmdSet = [udCore];
-	for(var i in cmdSet){
-		if( cmdSet[i][cmd] ){
-			funcP = cmdSet[i][cmd];
-			funcS = cmdSet[i];
+	for(var i in commandSet){
+		if( commandSet[i][cmd] ){
+			funcP = commandSet[i][cmd];
+			funcS = commandSet[i];
 		}
 	}
 	if( null === funcP || null === funcS ){
@@ -28,10 +24,12 @@ exports.invokeCommand = function (argv, cccb){
 	}
 
 	var cmdArgv = [];
-	for(var i = 0; i < (funcP.length - 1); i++){
-		cmdArgv.push(argv[i+1]);
+	// Push arguments from index ignoreArgNum. Ignore the fisrt-n parameter.
+	for(var i = ignoreArgNum; i < funcP.length; i++){
+		cmdArgv.push(argv[i]);
 	}
-	cmdArgv.push(cccb);
+	cmdArgv.push(cb);
+	// argv = [ cmd, p1, p2] >>> functionSet.cmd(p1, p2, callback);
 	funcP.apply(funcS, cmdArgv);
 	return 0;
 }
