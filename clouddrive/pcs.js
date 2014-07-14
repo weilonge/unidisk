@@ -11,7 +11,9 @@ var PCS_HOSTNAME_C = "c.pcs.baidu.com";
 var PCSURI = "/rest/2.0/pcs";
 var USERTOKEN = require('fs').readFileSync( process.env.HOME + '/.baidu_pcs_token' );
 
-exports._generatePath = function (options){
+var pcs = {};
+
+pcs._generatePath = function (options){
 	var path = "";
 	path += PCSURI + "/" + encodeURIComponent(options.cmd);
 	path += "?access_token=" + encodeURIComponent(USERTOKEN);
@@ -23,7 +25,7 @@ exports._generatePath = function (options){
 	return path;
 }
 
-exports._execute = function (options, cb){
+pcs._execute = function (options, cb){
 	var link = "https://" + PCS_HOSTNAME + this._generatePath(options);
 	var handle = curl.create();
 	handle(link, {
@@ -51,7 +53,7 @@ exports._execute = function (options, cb){
 	});
 }
 
-exports._download = function (options, cb){
+pcs._download = function (options, cb){
 	var link = "https://" + PCS_HOSTNAME_D + this._generatePath(options);
 	var handle = curl.create();
 	var estimationTime = (options.size / XFR_ESTIMATING_MIN_SPEED);
@@ -78,7 +80,7 @@ exports._download = function (options, cb){
 	});
 }
 
-exports.quota = function (cb){
+pcs.quota = function (cb){
 	this._execute({
 		cmd: "quota",
 		method: "info",
@@ -86,7 +88,7 @@ exports.quota = function (cb){
 	}, cb);
 }
 
-exports.getFileMeta = function (path, cb){
+pcs.getFileMeta = function (path, cb){
 	this._execute({
 		cmd: "file",
 		method: "meta",
@@ -95,7 +97,7 @@ exports.getFileMeta = function (path, cb){
 	}, cb);
 }
 
-exports.getFileMetaBatch = function (param, cb){
+pcs.getFileMetaBatch = function (param, cb){
 	this._execute({
 		cmd: "file",
 		method: "meta",
@@ -104,7 +106,7 @@ exports.getFileMetaBatch = function (param, cb){
 	}, cb);
 }
 
-exports.getFileDownload = function (path, offset, size, cb){
+pcs.getFileDownload = function (path, offset, size, cb){
 	this._download({
 		cmd: "file",
 		method: "download",
@@ -115,7 +117,7 @@ exports.getFileDownload = function (path, offset, size, cb){
 	}, cb);
 }
 
-exports.getFileList = function (path, cb){
+pcs.getFileList = function (path, cb){
 	this._execute({
 		cmd: "file",
 		method: "list",
@@ -124,9 +126,11 @@ exports.getFileList = function (path, cb){
 	}, cb);
 }
 
-exports.getFileListRecycle = function (cb){
+pcs.getFileListRecycle = function (cb){
 	this._execute({
 		cmd: "file",
 		method: "listrecycle"
 	}, cb);
 }
+
+module.exports = pcs;
