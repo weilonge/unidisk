@@ -8,6 +8,7 @@
   },
   "author": "Wei-Lun Lee (Sean)",
   "dependencies": {
+    "async": "^0.9.0",
     "node-curl": "^0.3.1"
   }
 }
