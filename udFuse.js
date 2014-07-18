@@ -6,7 +6,7 @@ var udManager = require('./helper/udManager');
 require('./helper/ObjectExtend');
 
 function getattr(path, cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line + " " + path);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	udManager.getFileMeta(path, function (error, response){
 		var stat = {};
 		var err = 0; // assume success
@@ -34,7 +34,7 @@ function getattr(path, cb) {
 };
 
 function readdir(path, cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line + " " + path);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	udManager.getFileList(path, function(error, response){
 		var names = [];
 		var err = 0; // assume success
@@ -52,7 +52,7 @@ function readdir(path, cb) {
 }
 
 function open(path, flags, cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line + " " + path);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	udManager.getFileMeta(path, function (error, response){
 		var stat = {};
 		var err = 0; // assume success
@@ -66,7 +66,7 @@ function open(path, flags, cb) {
 }
 
 function read(path, offset, len, buf, fh, cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line + " " + path);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	udManager.getFileMeta(path, function (error, response){
 		var err = 0; // assume success
 		if( !response.data || !response.data.list){
@@ -86,7 +86,7 @@ function read(path, offset, len, buf, fh, cb) {
 }
 
 function write(path, offset, len, buf, fh, cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line + " " + path);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	var err = 0; // assume success
 	var info = lookup(obj, path);
 	var file = info.node;
@@ -127,12 +127,12 @@ function write(path, offset, len, buf, fh, cb) {
 }
 
 function release(path, fh, cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line + " " + path);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	cb(0);
 }
 
 function create (path, mode, cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line + " " + path);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	var err = 0; // assume success
 	var info = lookup(obj, path);
 
@@ -157,7 +157,7 @@ function create (path, mode, cb) {
 }
 
 function unlink(path, cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line + " " + path);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	var err = 0; // assume success
 	var info = lookup(obj, path);
 
@@ -181,7 +181,7 @@ function unlink(path, cb) {
 }
 
 function rename(src, dst, cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
 	var err = -2; // -ENOENT assume failure
 	var source = lookup(obj, src), dest;
 
@@ -199,7 +199,7 @@ function rename(src, dst, cb) {
 }
 
 function mkdir(path, mode, cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line + " " + path);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	var err = -2; // -ENOENT assume failure
 	var dst = lookup(obj, path), dest;
 	if (typeof dst.node === 'undefined' && dst.parent != null) {
@@ -210,7 +210,7 @@ function mkdir(path, mode, cb) {
 }
 
 function rmdir(path, cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line + " " + path);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	var err = -2; // -ENOENT assume failure
 	var dst = lookup(obj, path), dest;
 	if (typeof dst.node === 'object' && dst.parent != null) {
@@ -221,20 +221,20 @@ function rmdir(path, cb) {
 }
 
 function init(cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
 	console.log("File system started at " + options.mountPoint);
 	console.log("To stop it, type this in another shell: fusermount -u " + options.mountPoint);
 	cb();
 }
 
 function setxattr(path, name, value, size, a, b, c) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line + " " + path);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	console.log("Setxattr called:", path, name, value, size, a, b, c)
 	cb(0);
 }
 
 function statfs(cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
 	udManager.showStat(function(error, response){
 		var block_size = 4096;
 		//f_bsize = block_size;
@@ -259,7 +259,7 @@ function statfs(cb) {
 }
 
 function destroy(cb) {
-	console.log("[DEBUG] " + new Date() + " " + __function + " : " + __line);
+	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
 	if (options.outJson) {
 		try {
 			fs.writeFileSync(options.outJson, JSON.stringify(obj, null, '  '), 'utf8');
