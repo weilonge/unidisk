@@ -7,6 +7,14 @@ udManager.showStat = function (cb) {
 	pcs.quota(cb);
 }
 
+udManager.getFileMeta = function (path, cb) {
+	pcs.getFileMeta(path, cb);
+}
+
+udManager.getFileList = function (path, cb) {
+	pcs.getFileList(path, cb);
+}
+
 udManager.downloadFileInRange = function(path, offset, size, cb) {
 	pcs.getFileDownload(path, offset, size, function(error, response){
 		if(error){

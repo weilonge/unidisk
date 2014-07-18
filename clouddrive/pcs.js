@@ -9,6 +9,7 @@ var PCS_HOSTNAME = "pcs.baidu.com";
 var PCS_HOSTNAME_D = "d.pcs.baidu.com";
 var PCS_HOSTNAME_C = "c.pcs.baidu.com";
 var PCSURI = "/rest/2.0/pcs";
+var UD_ROOTPATH = "/apps/APP_ROOT"
 var USERTOKEN = require('fs').readFileSync( process.env.HOME + '/.baidu_pcs_token' );
 
 var pcs = {};
@@ -93,7 +94,7 @@ pcs.getFileMeta = function (path, cb){
 		cmd: "file",
 		method: "meta",
 		httpMethod: "GET",
-		path: path
+		path: UD_ROOTPATH + path
 	}, cb);
 }
 
@@ -113,7 +114,7 @@ pcs.getFileDownload = function (path, offset, size, cb){
 		httpMethod: "GET",
 		offset: offset,
 		size: size,
-		path: path
+		path: UD_ROOTPATH + path
 	}, cb);
 }
 
@@ -122,7 +123,7 @@ pcs.getFileList = function (path, cb){
 		cmd: "file",
 		method: "list",
 		httpMethod: "GET",
-		path: path
+		path: UD_ROOTPATH + path
 	}, cb);
 }
 
