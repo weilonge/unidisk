@@ -224,6 +224,7 @@ function init(cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
 	console.log("File system started at " + options.mountPoint);
 	console.log("To stop it, type this in another shell: fusermount -u " + options.mountPoint);
+	udManager.init();
 	cb();
 }
 
