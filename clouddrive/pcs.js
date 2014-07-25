@@ -14,6 +14,18 @@ var USERTOKEN = require('fs').readFileSync( process.env.HOME + '/.baidu_pcs_toke
 
 var pcs = {};
 
+pcs._trimRootPath = function (fileMeta){
+	if(fileMeta.list){
+		for(var i in fileMeta.list){
+			var path = fileMeta.list[i].path;
+			if( 0 === path.indexOf(UD_ROOTPATH) ){
+				fileMeta.list[i].path = path.replace(UD_ROOTPATH, "");
+			}
+		}
+	}
+	return fileMeta;
+}
+
 pcs._generatePath = function (options){
 	var path = "";
 	path += PCSURI + "/" + encodeURIComponent(options.cmd);
@@ -45,7 +57,7 @@ pcs._execute = function (options, cb){
 			errorOutput = err;
 		}else{
 			try {
-				response.data = JSON.parse(this.body);
+				response.data = pcs._trimRootPath(JSON.parse(this.body));
 			} catch (e) {
 				errorOutput = this.body;
 			}
