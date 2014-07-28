@@ -58,7 +58,7 @@ udManager.init = function(){
 	this.FileListCache = {};
 	this.FileDataCache = {};
 	this.FileDownloadQueue = async.queue(function (task, callback) {
-		console.log(task.path + "|" + task.offset + '| downloading...');
+		console.log('  [B] ' + task.path + "|" + task.offset + '| downloading...');
 		task.status = "DOWNLOADING";
 		udManager.FileDataCache[task.md5sum] = task;
 		udManager.downloadFileInRange(task.path, task.offset, task.size, function(error, response){
@@ -149,10 +149,6 @@ udManager._isAllRequestDone = function (downloadRequest){
 			break;
 		}
 	}
-	console.log("======= Test request done =======");
-	console.log(this.FileDataCache);
-	console.log(done);
-	console.log(downloadRequest);
 	return done;
 }
 
@@ -161,26 +157,27 @@ udManager._requestPushAndDownload = function (path, downloadRequest, cb){
 		var taskMd5sum = task.md5sum;
 
 		if(udManager.FileDataCache[taskMd5sum]){
-			console.log('##[B.1] ' + udManager.FileDataCache[taskMd5sum].path + " is in cache: " + udManager.FileDataCache[taskMd5sum].status);
+			console.log('  [C1] ' + udManager.FileDataCache[taskMd5sum].path + " is in cache: " + udManager.FileDataCache[taskMd5sum].status);
 			callback();
 		}else{
 			noNewTask = false;
 			udManager.FileDownloadQueue.push(task, function (err){
-				console.log('##[B.2] ' + 'pushed task is done.');
+				console.log('  [C2] ' + 'pushed task is done.');
 				callback();
 			});
 		}
 	}, function(err){
 		// Verify the download request is all finished or not.
 		if( udManager._isAllRequestDone(downloadRequest) ){
-			console.log('##[C] ' + 'All requests are done.');
+			console.log('  [D] ' + 'All requests are done.');
 			cb();
 		}
 	});
 }
 
 udManager.downloadFileInRangeByCache = function(path, offset, size, cb) {
-	console.log('##### ' + path + ' ' + offset + ' ' + size);
+	console.log('{{');
+	console.log('  [A] ' + path + ' ' + offset + ' ' + size);
 	udManager.getFileMeta(path, function(error, response){
 		const totalSize = response.data.list[0].size;
 		// 1. Split the download request.
@@ -189,10 +186,10 @@ udManager.downloadFileInRangeByCache = function(path, offset, size, cb) {
 		// 2. Push downloading request.
 		udManager._requestPushAndDownload(path, requestList, function(){
 			// 3. All requests are done. Aggregate all data.
-			console.log('yeah!!! all requests are done.');
 			// Read the request data from files.
 			udManager._readCache(path, offset, size, requestList, function(data){
-				console.log('data is prepared.');
+				console.log('  [E] data is prepared.');
+				console.log('}}');
 				cb(null, {
 					data: data
 				});
@@ -204,7 +201,6 @@ udManager.downloadFileInRangeByCache = function(path, offset, size, cb) {
 udManager.downloadFileInRange = function(path, offset, size, cb) {
 	var retry = function () {
 		pcs.getFileDownload(path, offset, size, function(error, response){
-			console.log('B: ' + error);
 			if(error){
 				console.log('[ERROR] retry, error happened: ' + error);
 				retry();
