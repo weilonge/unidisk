@@ -157,22 +157,26 @@ udManager._isAllRequestDone = function (downloadRequest){
 }
 
 udManager._requestPushAndDownload = function (path, downloadRequest, cb){
-	var isFinished = false;
-	for(var req in downloadRequest ){
-		var taskMd5sum = downloadRequest[req].md5sum;
+	async.each(downloadRequest, function(task, callback){
+		var taskMd5sum = task.md5sum;
 
-		if(this.FileDataCache[taskMd5sum]){
-			console.log(downloadRequest[req].path + " is in cache: " + downloadRequest[req].status);
+		if(udManager.FileDataCache[taskMd5sum]){
+			console.log('##[B.1] ' + udManager.FileDataCache[taskMd5sum].path + " is in cache: " + udManager.FileDataCache[taskMd5sum].status);
+			callback();
 		}else{
-			this.FileDownloadQueue.push(downloadRequest[req], function (err){
-				// Verify the download request is all finished or not.
-				if(udManager._isAllRequestDone(downloadRequest) && !isFinished ){
-					isFinished = true;
-					cb();
-				}
+			noNewTask = false;
+			udManager.FileDownloadQueue.push(task, function (err){
+				console.log('##[B.2] ' + 'pushed task is done.');
+				callback();
 			});
 		}
-	}
+	}, function(err){
+		// Verify the download request is all finished or not.
+		if( udManager._isAllRequestDone(downloadRequest) ){
+			console.log('##[C] ' + 'All requests are done.');
+			cb();
+		}
+	});
 }
 
 udManager.downloadFileInRangeByCache = function(path, offset, size, cb) {
