@@ -1,11 +1,76 @@
 var pcs = require("../clouddrive/pcs");
 var async = require('async');
+var fs = require('fs');
+
+var UD_BLOCK_SIZE = 1*1024*1024;
+var UD_QUEUE_SIZE = 3;
+var UD_CACHE_PATH = "/tmp/ud/cache";
 
 var udManager = {};
+
+udManager._writeCache = function (task, data, cb){
+	fs.writeFile(UD_CACHE_PATH + "/" + task.md5sum, data, function(err) {
+		if(err) {
+			console.log(err);
+		} else {
+			console.log("The file was saved!");
+		}
+		cb();
+	});
+}
+
+udManager._readCache = function (path, offset, size, requestList, cb){
+	var buffer = new Buffer(size),
+		seek = 0,
+		writeSize = 0,
+		cursor_moved = 0;
+
+	for(var i in requestList ){
+		var task = requestList[i];
+		if( this.FileDataCache[task.md5sum] && this.FileDataCache[task.md5sum].status === "DONE" ){
+			seek = ( offset + cursor_moved ) % UD_BLOCK_SIZE;
+			writeSize = UD_BLOCK_SIZE - seek;
+			if( (writeSize + cursor_moved ) > size ){
+				writeSize = size - cursor_moved;
+			}
+
+			var fd = fs.openSync(UD_CACHE_PATH + "/" + task.md5sum, "rs");
+			fs.readSync(fd, buffer, cursor_moved, writeSize, seek);
+			fs.closeSync(fd);
+
+			cursor_moved += writeSize ;
+		} else {
+			console.error("======= Critical Error =======");
+			console.error(path);
+			console.error(offset);
+			console.error(size);
+			console.error(requestList);
+			console.error(this.FileDataCache);
+
+			throw Error("data is not finished.");
+		}
+	}
+	cb(buffer);
+}
 
 udManager.init = function(){
 	this.FileMetaCache = {};
 	this.FileListCache = {};
+	this.FileDataCache = {};
+	this.FileDownloadQueue = async.queue(function (task, callback) {
+		console.log(task.path + "|" + task.offset + '| downloading...');
+		task.status = "DOWNLOADING";
+		udManager.FileDataCache[task.md5sum] = task;
+		udManager.downloadFileInRange(task.path, task.offset, task.size, function(error, response){
+			console.log(task.path + "|" + task.offset + '| done!! ' + response.data.length);
+
+			// Write the buffer to the cache file.
+			udManager._writeCache(task, response.data, function(){
+				udManager.FileDataCache[task.md5sum].status = "DONE";
+				callback();
+			});
+		});
+	}, UD_QUEUE_SIZE);
 }
 
 udManager.showStat = function (cb) {
@@ -32,6 +97,96 @@ udManager.getFileList = function (path, cb) {
 			cb(error, response);
 		});
 	}
+}
+
+udManager._genmd5sum = function (task){
+	var crypto = require('crypto');
+	var name = task.path + "" + task.offset + "";
+	var hash = crypto.createHash('md5').update(name).digest('hex');
+	return hash;
+}
+
+udManager._generateRequestList = function(fileMeta, offset, size, fileSize){
+	const endPos = offset + size;
+	var requestList = [];
+
+	var alignedOffset = Math.floor( offset / UD_BLOCK_SIZE) * UD_BLOCK_SIZE;
+	for(; alignedOffset < endPos && alignedOffset < fileSize; alignedOffset += UD_BLOCK_SIZE ){
+		var task = {
+			path: fileMeta.path,
+			totalSize: fileMeta.size,
+			mtime: fileMeta.mtime,
+			status: "INIT",
+			priority: "HIGH",
+			md5sum: "",
+			offset: alignedOffset,
+			size: ((alignedOffset + UD_BLOCK_SIZE) > fileSize ? (fileSize - alignedOffset) : UD_BLOCK_SIZE )
+		};
+		var taskMd5sum = this._genmd5sum(task);
+		task.md5sum = taskMd5sum;
+
+		requestList.push(task);
+	}
+	return requestList;
+}
+
+udManager._isAllRequestDone = function (downloadRequest){
+	var done = true;
+	for(var req in downloadRequest){
+		var taskMd5sum = downloadRequest[req].md5sum;
+		if(this.FileDataCache[taskMd5sum] && this.FileDataCache[taskMd5sum].status === "DONE" ){
+			// do nothing.
+		}else{
+			done = false;
+			break;
+		}
+	}
+	console.log("======= Test request done =======");
+	console.log(this.FileDataCache);
+	console.log(done);
+	console.log(downloadRequest);
+	return done;
+}
+
+udManager._requestPushAndDownload = function (path, downloadRequest, cb){
+	var isFinished = false;
+	for(var req in downloadRequest ){
+		var taskMd5sum = downloadRequest[req].md5sum;
+
+		if(this.FileDataCache[taskMd5sum]){
+			console.log(downloadRequest[req].path + " is in cache: " + downloadRequest[req].status);
+		}else{
+			this.FileDownloadQueue.push(downloadRequest[req], function (err){
+				// Verify the download request is all finished or not.
+				if(udManager._isAllRequestDone(downloadRequest) && !isFinished ){
+					isFinished = true;
+					cb();
+				}
+			});
+		}
+	}
+}
+
+udManager.downloadFileInRangeByCache = function(path, offset, size, cb) {
+	console.log('##### ' + path + ' ' + offset + ' ' + size);
+	udManager.getFileMeta(path, function(error, response){
+		const totalSize = response.data.list[0].size;
+		// 1. Split the download request.
+		var requestList = udManager._generateRequestList(response.data.list[0], parseInt(offset), parseInt(size), totalSize);
+
+		// 2. Push downloading request.
+		udManager._requestPushAndDownload(path, requestList, function(){
+			// 3. All requests are done. Aggregate all data.
+			console.log('yeah!!! all requests are done.');
+			// Read the request data from files.
+			udManager._readCache(path, offset, size, requestList, function(data){
+				console.log('data is prepared.');
+				cb(null, {
+					data: data
+				});
+			});
+		});
+	});
 }
 
 udManager.downloadFileInRange = function(path, offset, size, cb) {
