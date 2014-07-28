@@ -81,10 +81,18 @@ udManager.getFileMeta = function (path, cb) {
 	if( this.FileMetaCache.hasOwnProperty(path) ){
 		cb(null, { data : this.FileMetaCache[path] });
 	}else{
-		pcs.getFileMeta(path, function(error, response){
-			udManager.FileMetaCache[path] = response.data;
-			cb(error, response);
-		});
+		var retry = function () {
+			pcs.getFileMeta(path, function(error, response){
+				if(error){
+					console.log("" + new Date () + "| " + error);
+					retry();
+				}else{
+					udManager.FileMetaCache[path] = response.data;
+					cb(error, response);
+				}
+			});
+		}
+		retry();
 	}
 }
 
@@ -190,13 +198,21 @@ udManager.downloadFileInRangeByCache = function(path, offset, size, cb) {
 }
 
 udManager.downloadFileInRange = function(path, offset, size, cb) {
-	pcs.getFileDownload(path, offset, size, function(error, response){
-		if(error){
-			udManager.downloadFileInRange(path, offset, size, cb);
-		}else{
-			cb(error, response);
-		}
-	});
+	var retry = function () {
+		pcs.getFileDownload(path, offset, size, function(error, response){
+			console.log('B: ' + error);
+			if(error){
+				console.log('[ERROR] retry, error happened: ' + error);
+				retry();
+			}if( !response || !response.data instanceof Buffer ){
+				console.log('[ERROR] retry, error response: ' + response);
+				retry();
+			}else{
+				cb(error, response);
+			}
+		});
+	}
+	retry();
 }
 
 udManager.downloadFileInMultiRange = function(path, list, cb) {
