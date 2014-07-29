@@ -204,10 +204,10 @@ udManager.downloadFileInRange = function(path, offset, size, cb) {
 			if(error){
 				console.log('[ERROR] retry, error happened: ' + error);
 				retry();
-			}if( !response || !response.data instanceof Buffer ){
+			}else if( !response || !response.data instanceof Buffer ){
 				console.log('[ERROR] retry, error response: ' + response);
 				retry();
-			}if( size != response.data.length ){
+			}else if( size != response.data.length ){
 				console.log('[ERROR] retry, size error: ' + size + " " + response.data.length );
 				retry();
 			}else{
