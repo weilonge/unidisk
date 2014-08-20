@@ -78,10 +78,10 @@ udManager.showStat = function (cb) {
 }
 
 udManager.getFileMeta = function (path, cb) {
-	if( this.FileMetaCache.hasOwnProperty(path) ){
-		cb(null, { data : this.FileMetaCache[path] });
-	}else{
-		var retry = function () {
+	var retry = function () {
+		if( udManager.FileMetaCache.hasOwnProperty(path) ){
+			cb(null, { data : udManager.FileMetaCache[path] });
+		}else{
 			pcs.getFileMeta(path, function(error, response){
 				if(error){
 					console.log("" + new Date () + "| " + error);
@@ -92,8 +92,8 @@ udManager.getFileMeta = function (path, cb) {
 				}
 			});
 		}
-		retry();
-	}
+	};
+	retry();
 }
 
 udManager.getFileList = function (path, cb) {
