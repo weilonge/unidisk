@@ -10,6 +10,7 @@
   "dependencies": {
     "async": "^0.9.0",
     "fuse4js": "^0.1.9",
-    "node-curl": "^0.3.1"
+    "node-curl": "^0.3.1",
+    "segfault-handler": "^0.2.1"
   }
 }
