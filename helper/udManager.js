@@ -5,6 +5,7 @@ var fs = require('fs');
 var UD_BLOCK_SIZE = 1*1024*1024;
 var UD_QUEUE_SIZE = 3;
 var UD_CACHE_PATH = "/tmp/ud/cache";
+var UD_PREFETCH_SIZE = 10 * UD_BLOCK_SIZE;
 
 var udManager = {};
 
@@ -27,6 +28,9 @@ udManager._readCache = function (path, offset, size, requestList, cb){
 
 	for(var i in requestList ){
 		var task = requestList[i];
+		if( task.priority === "PREFETCH" ){
+			continue;
+		}
 		if( this.FileDataCache[task.md5sum] && this.FileDataCache[task.md5sum].status === "DONE" ){
 			seek = ( offset + cursor_moved ) % UD_BLOCK_SIZE;
 			writeSize = UD_BLOCK_SIZE - seek;
@@ -135,13 +139,36 @@ udManager._generateRequestList = function(fileMeta, offset, size, fileSize){
 
 		requestList.push(task);
 	}
+
+	const prefetchEndPos = endPos + UD_PREFETCH_SIZE;
+	for(; alignedOffset < prefetchEndPos && alignedOffset < fileSize; alignedOffset += UD_BLOCK_SIZE ){
+		var task = {
+			path: fileMeta.path,
+			totalSize: fileMeta.size,
+			mtime: fileMeta.mtime,
+			status: "INIT",
+			priority: "PREFETCH",
+			md5sum: "",
+			offset: alignedOffset,
+			size: ((alignedOffset + UD_BLOCK_SIZE) > fileSize ? (fileSize - alignedOffset) : UD_BLOCK_SIZE )
+		};
+		var taskMd5sum = this._genmd5sum(task);
+		task.md5sum = taskMd5sum;
+
+		requestList.push(task);
+	}
+
 	return requestList;
 }
 
 udManager._isAllRequestDone = function (downloadRequest){
 	var done = true;
 	for(var req in downloadRequest){
-		var taskMd5sum = downloadRequest[req].md5sum;
+		var task = downloadRequest[req];
+		var taskMd5sum = task.md5sum;
+		if( task.priority === "PREFETCH" ){
+			continue;
+		}
 		if(this.FileDataCache[taskMd5sum] && this.FileDataCache[taskMd5sum].status === "DONE" ){
 			// do nothing.
 		}else{
@@ -159,6 +186,11 @@ udManager._requestPushAndDownload = function (path, downloadRequest, cb){
 		if(udManager.FileDataCache[taskMd5sum]){
 			console.log('  [C1] ' + udManager.FileDataCache[taskMd5sum].path + " is in cache: " + udManager.FileDataCache[taskMd5sum].status);
 			callback();
+		} else if ( task.priority === "PREFETCH" ) {
+			udManager.FileDownloadQueue.push(task, function (err){
+				console.log('  [C3] ' + 'pushed task is done.');
+			});
+			callback();
 		}else{
 			noNewTask = false;
 			udManager.FileDownloadQueue.push(task, function (err){
@@ -168,10 +200,18 @@ udManager._requestPushAndDownload = function (path, downloadRequest, cb){
 		}
 	}, function(err){
 		// Verify the download request is all finished or not.
-		if( udManager._isAllRequestDone(downloadRequest) ){
-			console.log('  [D] ' + 'All requests are done.');
-			cb();
+		function retry () {
+			if( udManager._isAllRequestDone(downloadRequest) ){
+				console.log('  [D] ' + 'All requests are done.');
+				cb();
+			}else {
+				console.log("retry to wait all requests done...");
+				setTimeout(function () {
+					retry();
+				}, 1000);
+			}
 		}
+		retry();
 	});
 }
 
