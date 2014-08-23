@@ -1,10 +1,19 @@
-var pcs = require('./clouddrive/pcs');
+var SegfaultHandler = require('segfault-handler');
+SegfaultHandler.registerHandler();
+var udManager = require('./helper/udManager');
 
-var filePath = "/apps/APP_ROOT/H_M/Mirror Mirror 2012 720p BluRay x264 AC3-HDChina [EtHD]/Mirror.Mirror.2012.720p.BluRay.x264.AC3-HDChina.mkv";
+udManager.init();
 
-pcs.getFileMetaBatch({list:[
-	{path: filePath}
-	]}, function(req, res){
-	console.log(res);
+udManager.getFileMeta("/Movies/UE美歐/Battleground/sprinter-battleground.avi", function (error, response) {
+	for(var i = 0; i < 300; i++ ){(function (index){
+		var task = {
+			path: "/Movies/UE美歐/Battleground/sprinter-battleground.avi",
+			offset: index * 131072,
+			len: 131072
+		}
+		udManager.downloadFileInRangeByCache(task.path, task.offset, task.len, function(error, response){
+			console.log(response.data.length);
+		});
+	})(i);}
 });
 
