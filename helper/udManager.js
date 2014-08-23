@@ -243,13 +243,13 @@ udManager.downloadFileInRange = function(path, offset, size, cb) {
 		pcs.getFileDownload(path, offset, size, function(error, response){
 			if(error){
 				console.log('[ERROR] retry, error happened: ' + error);
-				retry();
+				setTimeout(function () { retry(); }, 800);
 			}else if( !response || !response.data instanceof Buffer ){
 				console.log('[ERROR] retry, error response: ' + response);
-				retry();
+				setTimeout(function () { retry(); }, 800);
 			}else if( size != response.data.length ){
 				console.log('[ERROR] retry, size error: ' + size + " " + response.data.length );
-				retry();
+				setTimeout(function () { retry(); }, 800);
 			}else{
 				cb(error, response);
 			}
