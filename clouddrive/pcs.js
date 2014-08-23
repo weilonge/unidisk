@@ -3,10 +3,11 @@ var http = require('https');
 
 var XFR_ESTIMATING_MIN_SPEED = 20 * 1024; // n bytes/sec
 var XFR_ESTIMATING_MIN_TIME = 20; // secs
-var XFR_CONNECTION_TIMEOUT = 3; // secs
+var XFR_CONNECTION_TIMEOUT = 10; // secs
+var XFR_PROXY = "proxy.hinet.net:80";
 
 var PCS_HOSTNAME = "pcs.baidu.com";
-var PCS_HOSTNAME_D = "d.pcs.baidu.com";
+var PCS_HOSTNAME_D = "pcs.baidu.com"; // "d.pcs.baidu.com";
 var PCS_HOSTNAME_C = "c.pcs.baidu.com";
 var PCSURI = "/rest/2.0/pcs";
 var UD_ROOTPATH = "/apps/APP_ROOT"
@@ -44,6 +45,7 @@ pcs._execute = function (options, cb){
 	handle(link, {
 		RAW: 0,
 		CONNECTTIMEOUT: XFR_CONNECTION_TIMEOUT,
+		PROXY: XFR_PROXY,
 		POST: ( options.httpMethod === "POST" ? 1 : 0 ),
 		SSL_VERIFYPEER: 0
 	}, function(err){
@@ -72,8 +74,12 @@ pcs._download = function (options, cb){
 	var estimationTime = (options.size / XFR_ESTIMATING_MIN_SPEED);
 	handle(link, {
 		RAW: 1,
+		//REFERER: "http://www.baidu.com",
 		CONNECTTIMEOUT: XFR_CONNECTION_TIMEOUT,
+		PROXY: XFR_PROXY,
 		FOLLOWLOCATION: 1,
+		AUTOREFERER: 1,
+		//USERAGENT: "",
 		TIMEOUT: ( estimationTime > XFR_ESTIMATING_MIN_TIME ? estimationTime : XFR_ESTIMATING_MIN_TIME ),
 		SSL_VERIFYPEER: 0,
 		RANGE: '' + options.offset + '-' + ( options.offset + options.size - 1 )
