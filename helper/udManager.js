@@ -184,7 +184,7 @@ udManager._requestPushAndDownload = function (path, downloadRequest, cb){
 		var taskMd5sum = task.md5sum;
 
 		if(udManager.FileDataCache[taskMd5sum]){
-			console.log('  [C1] ' + udManager.FileDataCache[taskMd5sum].path + " is in cache: " + udManager.FileDataCache[taskMd5sum].status);
+			console.log('  [C1] ' + udManager.FileDataCache[taskMd5sum].path + " is in cache: " + udManager.FileDataCache[taskMd5sum].status + "| " + task.offset);
 			callback();
 		} else if ( task.priority === "PREFETCH" ) {
 			udManager.FileDownloadQueue.push(task, function (err){
@@ -248,7 +248,7 @@ udManager.downloadFileInRange = function(path, offset, size, cb) {
 				console.log('[ERROR] retry, error response: ' + response);
 				setTimeout(function () { retry(); }, 800);
 			}else if( size != response.data.length ){
-				console.log('[ERROR] retry, size error: ' + size + " " + response.data.length );
+				console.log('[ERROR] retry, size error: ' + offset + " " + size + " " + response.data.length + " " + response.data);
 				setTimeout(function () { retry(); }, 800);
 			}else{
 				cb(error, response);
