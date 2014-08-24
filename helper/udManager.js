@@ -77,7 +77,17 @@ udManager.init = function(){
 }
 
 udManager.showStat = function (cb) {
-	pcs.quota(cb);
+	var retry = function () {
+		pcs.quota(function(error, response){
+			if(error){
+				console.log("" + new Date () + "| " + error);
+				retry();
+			}else{
+				cb(error, response);
+			}
+		});
+	};
+	retry();
 }
 
 udManager.getFileMeta = function (path, cb) {
@@ -100,14 +110,22 @@ udManager.getFileMeta = function (path, cb) {
 }
 
 udManager.getFileList = function (path, cb) {
-	if( this.FileListCache.hasOwnProperty(path) ){
-		cb(null, { data : this.FileListCache[path] });
-	}else{
-		pcs.getFileList(path, function(error, response){
-			udManager.FileListCache[path] = response.data;
-			cb(error, response);
-		});
-	}
+	var retry = function () {
+		if( udManager.FileListCache.hasOwnProperty(path) ){
+			cb(null, { data : udManager.FileListCache[path] });
+		}else{
+			pcs.getFileList(path, function(error, response){
+				if(error){
+					console.log("" + new Date () + "| " + error);
+					retry();
+				}else{
+					udManager.FileListCache[path] = response.data;
+					cb(error, response);
+				}
+			});
+		}
+	};
+	retry();
 }
 
 udManager._genmd5sum = function (task){
