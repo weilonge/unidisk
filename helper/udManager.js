@@ -64,7 +64,6 @@ udManager.init = function(){
 	this.FileDownloadQueue = async.queue(function (task, callback) {
 		console.log('  [B] ' + task.path + "|" + task.offset + '| downloading...');
 		task.status = "DOWNLOADING";
-		udManager.FileDataCache[task.md5sum] = task;
 		udManager.downloadFileInRange(task.path, task.offset, task.size, function(error, response){
 			console.log(task.path + "|" + task.offset + '| done!! ' + response.data.length);
 
@@ -187,12 +186,13 @@ udManager._requestPushAndDownload = function (path, downloadRequest, cb){
 			console.log('  [C1] ' + udManager.FileDataCache[taskMd5sum].path + " is in cache: " + udManager.FileDataCache[taskMd5sum].status + "| " + task.offset);
 			callback();
 		} else if ( task.priority === "PREFETCH" ) {
+			udManager.FileDataCache[taskMd5sum] = task;
 			udManager.FileDownloadQueue.push(task, function (err){
 				console.log('  [C3] ' + 'pushed task is done.');
 			});
 			callback();
 		}else{
-			noNewTask = false;
+			udManager.FileDataCache[taskMd5sum] = task;
 			udManager.FileDownloadQueue.push(task, function (err){
 				console.log('  [C2] ' + 'pushed task is done.');
 				callback();
