@@ -59,7 +59,14 @@ pcs._execute = function (options, cb){
 			errorOutput = err;
 		}else{
 			try {
-				response.data = pcs._trimRootPath(JSON.parse(this.body));
+				var responseJson = JSON.parse(this.body);
+				if ( responseJson.error_code && responseJson.error_code !== 31066 ) { // file does not exist
+					//{ error_code: 31326, error_msg: 'anti hotlinking' }
+					errorOutput = responseJson;
+					console.log(errorOutput);
+				} else {
+					response.data = pcs._trimRootPath(responseJson);
+				}
 			} catch (e) {
 				errorOutput = this.body;
 			}
