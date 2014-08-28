@@ -1,7 +1,8 @@
 #!/bin/sh
 
-MOUNTPATH=$1/root
-CACHEPATH=$1/cache
+UD_ROOT=/tmp/ud # $1
+MOUNTPATH=$UD_ROOT/root
+CACHEPATH=$UD_ROOT/cache
 
 mkdir -p $MOUNTPATH
 mkdir -p $CACHEPATH
