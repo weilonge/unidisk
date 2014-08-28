@@ -47,6 +47,7 @@ pcs._execute = function (options, cb){
 		CONNECTTIMEOUT: XFR_CONNECTION_TIMEOUT,
 		PROXY: XFR_PROXY,
 		POST: ( options.httpMethod === "POST" ? 1 : 0 ),
+		SSL_VERIFYHOST: 0,
 		SSL_VERIFYPEER: 0
 	}, function(err){
 		var errorOutput = null;
@@ -88,6 +89,7 @@ pcs._download = function (options, cb){
 		AUTOREFERER: 1,
 		//USERAGENT: "",
 		TIMEOUT: ( estimationTime > XFR_ESTIMATING_MIN_TIME ? estimationTime : XFR_ESTIMATING_MIN_TIME ),
+		SSL_VERIFYHOST: 0,
 		SSL_VERIFYPEER: 0,
 		RANGE: '' + options.offset + '-' + ( options.offset + options.size - 1 )
 	}, function(err){
