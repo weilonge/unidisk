@@ -20,9 +20,8 @@ udManager._writeCache = function (task, data, cb){
 	});
 }
 
-udManager._readCache = function (path, offset, size, requestList, cb){
-	var buffer = new Buffer(size),
-		seek = 0,
+udManager._readCache = function (path, buffer, offset, size, requestList, cb){
+	var seek = 0,
 		writeSize = 0,
 		cursor_moved = 0;
 
@@ -54,7 +53,7 @@ udManager._readCache = function (path, offset, size, requestList, cb){
 			throw Error("data is not finished.");
 		}
 	}
-	cb(buffer);
+	cb();
 }
 
 udManager.init = function(){
@@ -233,7 +232,7 @@ udManager._requestPushAndDownload = function (path, downloadRequest, cb){
 	});
 }
 
-udManager.downloadFileInRangeByCache = function(path, offset, size, cb) {
+udManager.downloadFileInRangeByCache = function(path, buffer, offset, size, cb) {
 	console.log('{{');
 	console.log('  [A] ' + path + ' ' + offset + ' ' + size);
 	udManager.getFileMeta(path, function(error, response){
@@ -245,12 +244,10 @@ udManager.downloadFileInRangeByCache = function(path, offset, size, cb) {
 		udManager._requestPushAndDownload(path, requestList, function(){
 			// 3. All requests are done. Aggregate all data.
 			// Read the request data from files.
-			udManager._readCache(path, offset, size, requestList, function(data){
+			udManager._readCache(path, buffer, offset, size, requestList, function(){
 				console.log('  [E] data is prepared.');
 				console.log('}}');
-				cb(null, {
-					data: data
-				});
+				cb(null);
 			});
 		});
 	});

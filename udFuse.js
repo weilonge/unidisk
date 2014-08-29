@@ -80,8 +80,7 @@ function read(path, offset, len, buf, fh, cb) {
 			err = -1; // -EPERM
 			cb( err );
 		}else{
-			udManager.downloadFileInRangeByCache(path, offset, len, function(error, response){
-				response.data.copy(buf);
+			udManager.downloadFileInRangeByCache(path, buf, offset, len, function(error){
 				cb(len);
 			});
 		}
