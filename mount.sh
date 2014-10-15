@@ -8,7 +8,12 @@ mkdir -p $MOUNTPATH
 mkdir -p $CACHEPATH
 
 rm $CACHEPATH/*
-fusermount -u $MOUNTPATH
+
+if type fusermount &> /dev/null; then
+  fusermount -u $MOUNTPATH
+else
+  umount $MOUNTPATH
+fi
 
 node udFuse.js node_modules/fuse4js/example/sample.json $MOUNTPATH
 
