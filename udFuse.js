@@ -5,9 +5,6 @@ var options = {};  // See parseArgs()
 var udManager = require('./helper/udManager');
 require('./helper/ObjectExtend');
 
-var SegfaultHandler = require('segfault-handler');
-SegfaultHandler.registerHandler();
-
 function getattr(path, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	udManager.getFileMeta(path, function (error, response){
