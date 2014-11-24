@@ -77,14 +77,19 @@ udManager.init = function(){
 
 udManager.showStat = function (cb) {
 	var retry = function () {
-		pcs.quota(function(error, response){
-			if(error){
-				console.log("" + new Date () + "| " + error);
-				retry();
-			}else{
-				cb(error, response);
-			}
-		});
+		if( udManager.QuotaCache ) {
+			cb(null, udManager.QuotaCache );
+		} else {
+			pcs.quota(function(error, response){
+				if(error){
+					console.log("" + new Date () + "| " + error);
+					retry();
+				}else{
+					udManager.QuotaCache = response;
+					cb(error, response);
+				}
+			});
+		}
 	};
 	retry();
 }
