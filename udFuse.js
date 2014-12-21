@@ -14,7 +14,7 @@ function getattr(path, cb) {
 			err = -2; // -ENOENT
 		}else if( response.data.list[0].isdir == 1 ){
 			stat.size = 4096;   // standard size of a directory
-			stat.mode = 040770; // directory with 777 permissions
+			stat.mode = 040550; // directory with 777 permissions
 			stat.mtime = new Date(response.data.list[0].mtime * 1000);
 			stat.atime = new Date(response.data.list[0].mtime * 1000);
 			stat.ctime = new Date(response.data.list[0].ctime * 1000);
@@ -22,7 +22,7 @@ function getattr(path, cb) {
 			stat.gid = process.getgid();
 		}else{
 			stat.size = response.data.list[0].size;
-			stat.mode = 0100660; // file with 666 permissions
+			stat.mode = 0100440; // file with 666 permissions
 			stat.mtime = new Date(response.data.list[0].mtime * 1000);
 			stat.atime = new Date(response.data.list[0].mtime * 1000);
 			stat.ctime = new Date(response.data.list[0].ctime * 1000);
