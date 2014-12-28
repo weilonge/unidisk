@@ -19,6 +19,7 @@ umountUd() {
   fi
 }
 
+umountUd
 node udFuse.js node_modules/fuse4js/example/sample.json $MOUNTPATH
 
 
