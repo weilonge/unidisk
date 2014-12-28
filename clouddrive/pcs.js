@@ -1,10 +1,9 @@
-var curl = require('node-curl');
-var http = require('https');
+var unirest = require('unirest');
 
 var XFR_ESTIMATING_MIN_SPEED = 20 * 1024; // n bytes/sec
 var XFR_ESTIMATING_MIN_TIME = 20; // secs
 var XFR_CONNECTION_TIMEOUT = 10; // secs
-var XFR_PROXY = "proxy.hinet.net:80";
+var XFR_PROXY = "http://proxy.hinet.net:80";
 
 var PCS_HOSTNAME = "pcs.baidu.com";
 var PCS_HOSTNAME_D = "pcs.baidu.com"; // "d.pcs.baidu.com";
@@ -41,26 +40,26 @@ pcs._generatePath = function (options){
 
 pcs._execute = function (options, cb){
 	var link = "https://" + PCS_HOSTNAME + this._generatePath(options);
-	var handle = curl.create();
-	handle(link, {
-		RAW: 0,
-		CONNECTTIMEOUT: XFR_CONNECTION_TIMEOUT,
-		PROXY: XFR_PROXY,
-		POST: ( options.httpMethod === "POST" ? 1 : 0 ),
-		SSL_VERIFYHOST: 0,
-		SSL_VERIFYPEER: 0
-	}, function(err){
+	unirest.get(link)
+	.proxy(XFR_PROXY)
+	.timeout(XFR_CONNECTION_TIMEOUT * 1000)
+	.end(function (httpResponse) {
 		var errorOutput = null;
 		var response = {
 			queryPara: options,
 			uri: link,
 			data: null
 		};
-		if(err){
-			errorOutput = err;
+		if(httpResponse.serverError){
+			errorOutput = httpResponse.body;
+			console.log({
+				code: httpResponse.code,
+				status: httpResponse.status,
+				statusType: httpResponse.statusType
+			});
 		}else{
 			try {
-				var responseJson = JSON.parse(this.body);
+				var responseJson = JSON.parse(httpResponse.body);
 				if ( responseJson.error_code && responseJson.error_code !== 31066 ) { // file does not exist
 					//{ error_code: 31326, error_msg: 'anti hotlinking' }
 					errorOutput = responseJson;
@@ -69,7 +68,7 @@ pcs._execute = function (options, cb){
 					response.data = pcs._trimRootPath(responseJson);
 				}
 			} catch (e) {
-				errorOutput = this.body;
+				errorOutput = httpResponse.body;
 			}
 		}
 		cb(errorOutput, response);
@@ -78,31 +77,29 @@ pcs._execute = function (options, cb){
 
 pcs._download = function (options, cb){
 	var link = "https://" + PCS_HOSTNAME_D + this._generatePath(options);
-	var handle = curl.create();
 	var estimationTime = (options.size / XFR_ESTIMATING_MIN_SPEED);
-	handle(link, {
-		RAW: 1,
-		//REFERER: "http://www.baidu.com",
-		CONNECTTIMEOUT: XFR_CONNECTION_TIMEOUT,
-		PROXY: XFR_PROXY,
-		FOLLOWLOCATION: 1,
-		AUTOREFERER: 1,
-		//USERAGENT: "",
-		TIMEOUT: ( estimationTime > XFR_ESTIMATING_MIN_TIME ? estimationTime : XFR_ESTIMATING_MIN_TIME ),
-		SSL_VERIFYHOST: 0,
-		SSL_VERIFYPEER: 0,
-		RANGE: '' + options.offset + '-' + ( options.offset + options.size - 1 )
-	}, function(err){
+	unirest.get(link)
+	.proxy(XFR_PROXY)
+	.timeout(XFR_CONNECTION_TIMEOUT * 1000)
+	.encoding(null)
+	.headers({
+		'Range': 'bytes=' + options.offset + '-' + ( options.offset + options.size - 1 )
+	})
+	.end(function (httpResponse){
 		var errorOutput = null;
 		var response = {
 			queryPara: options,
 			uri: link,
 			data: null
 		};
-		if(err){
-			errorOutput = err;
+		if(httpResponse.serverError){
+			errorOutput = {
+				code: httpResponse.code,
+				status: httpResponse.status,
+				statusType: httpResponse.statusType
+			};
 		}else{
-			response.data = this.body;
+			response.data = httpResponse.raw_body;
 		}
 		cb(errorOutput, response);
 	});
