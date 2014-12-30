@@ -86,43 +86,7 @@ function read(path, offset, len, buf, fh, cb) {
 
 function write(path, offset, len, buf, fh, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
-	var err = 0; // assume success
-	var info = lookup(obj, path);
-	var file = info.node;
-	var name = info.name;
-	var parent = info.parent;
-	var beginning, blank = '', data, ending='', numBlankChars;
-
-	switch (typeof file) {
-	case 'undefined':
-		err = -2; // -ENOENT
-		break;
-
-	case 'object': // directory
-		err = -1; // -EPERM
-		break;
-
-	case 'string': // a string treated as ASCII characters
-		data = buf.toString('ascii'); // read the new data
-		if (offset < file.length) {
-			beginning = file.substring(0, offset);
-			if (offset + data.length < file.length) {
-				ending = file.substring(offset + data.length, file.length)
-			}
-		} else {
-			beginning = file;
-			numBlankChars = offset - file.length;
-			while (numBlankChars--) blank += ' ';
-		}
-		delete parent[name];
-		parent[name] = beginning + blank + data + ending;
-		err = data.length;
-		break;
-
-	default:
-		break;
-	}
-	cb(err);
+	cb(EPERM);
 }
 
 function release(path, fh, cb) {
@@ -132,91 +96,27 @@ function release(path, fh, cb) {
 
 function create (path, mode, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
-	var err = 0; // assume success
-	var info = lookup(obj, path);
-
-	switch (typeof info.node) {
-	case 'undefined':
-		if (info.parent !== null) {
-			info.parent[info.name] = '';
-		} else {
-			err = -2; // -ENOENT
-		}
-		break;
-
-	case 'string': // existing file
-	case 'object': // existing directory
-		err = -17; // -EEXIST
-		break;
-
-	default:
-		break;
-	}
-	cb(err);
+	cb(EPERM);
 }
 
 function unlink(path, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
-	var err = 0; // assume success
-	var info = lookup(obj, path);
-
-	switch (typeof info.node) {
-	case 'undefined':
-		err = -2; // -ENOENT
-		break;
-
-	case 'object': // existing directory
-		err = -1; // -EPERM
-		break;
-
-	case 'string': // existing file
-		delete info.parent[info.name];
-		break;
-
-	default:
-		break;
-	}
-	cb(err);
+	cb(EPERM);
 }
 
 function rename(src, dst, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
-	var err = -2; // -ENOENT assume failure
-	var source = lookup(obj, src), dest;
-
-	if (typeof source.node !== 'undefined') { // existing file or directory
-		dest = lookup(obj, dst);
-		if (typeof dest.node === 'undefined' && dest.parent !== null) {
-			dest.parent[dest.name] = source.node;
-			delete source.parent[source.name];
-			err = 0;
-		} else {
-			err = -17; // -EEXIST
-		}
-	}
-	cb(err);
+	cb(EPERM);
 }
 
 function mkdir(path, mode, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
-	var err = -2; // -ENOENT assume failure
-	var dst = lookup(obj, path), dest;
-	if (typeof dst.node === 'undefined' && dst.parent != null) {
-		dst.parent[dst.name] = {};
-		err = 0;
-	}
-	cb(err);
+	cb(EPERM);
 }
 
 function rmdir(path, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
-	var err = -2; // -ENOENT assume failure
-	var dst = lookup(obj, path), dest;
-	if (typeof dst.node === 'object' && dst.parent != null) {
-		delete dst.parent[dst.name];
-		err = 0;
-	}
-	cb(err);
+	cb(EPERM);
 }
 
 function init(cb) {
