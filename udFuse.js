@@ -5,13 +5,16 @@ var options = {};  // See parseArgs()
 var udManager = require('./helper/udManager');
 require('./helper/ObjectExtend');
 
+const EPERM = -1;
+const ENOENT = -2;
+
 function getattr(path, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	udManager.getFileMeta(path, function (error, response){
 		var stat = {};
 		var err = 0; // assume success
 		if( !response.data || !response.data.list){
-			err = -2; // -ENOENT
+			err = ENOENT; // -ENOENT
 		}else if( response.data.list[0].isdir == 1 ){
 			stat.size = 4096;   // standard size of a directory
 			stat.mode = 040550; // directory with 777 permissions
@@ -39,7 +42,7 @@ function readdir(path, cb) {
 		var names = [];
 		var err = 0; // assume success
 		if( !response.data ){
-			err = -2; // -ENOENT
+			err = ENOENT; // -ENOENT
 		}else{
 			for(var fp in response.data.list){
 				var filePathSplited = response.data.list[fp].path.split("/");
@@ -57,7 +60,7 @@ function open(path, flags, cb) {
 		var stat = {};
 		var err = 0; // assume success
 		if( !response.data || !response.data.list){
-			err = -2; // -ENOENT
+			err = ENOENT; // -ENOENT
 		}else if( response.data.list[0].isdir == 1 ){
 		}else{
 		}
@@ -70,11 +73,11 @@ function read(path, offset, len, buf, fh, cb) {
 	udManager.getFileMeta(path, function (error, response){
 		var err = 0; // assume success
 		if( !response.data || !response.data.list){
-			err = -2; // -ENOENT
+			err = ENOENT; // -ENOENT
 			cb( err );
 		}else if( response.data.list[0].isdir == 1 ){
 			// directory
-			err = -1; // -EPERM
+			err = EPERM; // -EPERM
 			cb( err );
 		}else{
 			udManager.downloadFileInRangeByCache(path, buf, offset, len, function(error){
