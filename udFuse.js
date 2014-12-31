@@ -1,6 +1,5 @@
 var f4js = require('fuse4js');
 var fs = require('fs');
-var obj = null;   // The JSON object we'll be exposing as a file system
 var options = {};  // See parseArgs()
 var udManager = require('./helper/udManager');
 require('./helper/ObjectExtend');
@@ -163,13 +162,6 @@ function statfs(cb) {
 
 function destroy(cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
-	if (options.outJson) {
-		try {
-			fs.writeFileSync(options.outJson, JSON.stringify(obj, null, '  '), 'utf8');
-		} catch (e) {
-			console.log("Exception when writing file: " + e);
-		}
-	}
 	console.log("File system stopped");
 	cb();
 }
@@ -194,38 +186,29 @@ var handlers = {
 
 function usage() {
 	console.log();
-	console.log("Usage: node jsonFS.js [options] inputJsonFile mountPoint");
-	console.log("(Ensure the mount point is empty and you have wrx permissions to it)\n")
+	console.log("Usage: node udFuse.js [options] mountPoint\n")
 	console.log("Options:");
-	console.log("-o outputJsonFile  : save modified data to new JSON file. Input file is never modified.");
 	console.log("-d                 : make FUSE print debug statements.");
 	console.log("-a                 : add allow_other option to mount (might need user_allow_other in system fuse config file).");
 	console.log();
 	console.log("Example:");
-	console.log("node example/jsonFS.fs -d -o /tmp/output.json example/sample.json /tmp/mnt");
+	console.log("node udFuse.fs -d /tmp/mnt");
 	console.log();
 }
 
 function parseArgs() {
 	var i, remaining;
 	var args = process.argv;
-	if (args.length < 4) {
+	if (args.length < 3) {
 		return false;
 	}
 	options.mountPoint = args[args.length - 1];
-	options.inJson = args[args.length - 2];
-	remaining = args.length - 4;
+	remaining = args.length - 3;
 	i = 2;
 	while (remaining--) {
 		if (args[i] === '-d') {
 			options.debugFuse = true;
 			++i;
-		} else if (args[i] === '-o') {
-			if (remaining) {
-				options.outJson = args[i+1];
-				i += 2;
-				--remaining;
-			} else return false;
 		} else if (args[i] === '-a') {
 			options.allowOthers = true;
 			++i;
@@ -236,14 +219,9 @@ function parseArgs() {
 
 (function main() {
 	if (parseArgs()) {
-		console.log("\nInput file: " + options.inJson);
-		console.log("Mount point: " + options.mountPoint);
-		if (options.outJson)
-			console.log("Output file: " + options.outJson);
+		console.log("\nMount point: " + options.mountPoint);
 		if (options.debugFuse)
 			console.log("FUSE debugging enabled");
-		content = fs.readFileSync(options.inJson, 'utf8');
-		obj = JSON.parse(content);
 		try {
 			var opts = [];
 			if (options.allowOthers) {
