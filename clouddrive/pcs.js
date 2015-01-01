@@ -123,12 +123,22 @@ pcs.getFileMeta = function (path, cb){
 }
 
 pcs.getFileMetaBatch = function (param, cb){
+	for(var i = 0; i < param.list.length; i++){
+		param.list[i].path = UD_ROOTPATH + param.list[i].path;
+	}
 	this._execute({
 		cmd: "file",
 		method: "meta",
 		httpMethod: "GET",
 		param: ( typeof(param) === 'string' ? param : JSON.stringify(param) )
-	}, cb);
+	}, function (errorOutput, response) {
+		if( response && response.data ){
+			for(var i = 0; i < response.data.list.length; i++){
+				response.data.list[i] =  pcs._trimRootPath(response.data.list[i]);
+			}
+		}
+		cb(errorOutput, response);
+	});
 }
 
 pcs.getFileDownload = function (path, offset, size, cb){
