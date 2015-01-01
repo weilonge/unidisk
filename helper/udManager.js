@@ -9,6 +9,16 @@ var UD_PREFETCH_SIZE = 10 * UD_BLOCK_SIZE;
 
 var udManager = {};
 
+udManager._isIllegalFileName = function (path) {
+	var list = path.split('/');
+	for(var i = 0; i < list.length; i++){
+		if( list[i].indexOf('.') === 0 ){
+			return true;
+		}
+	}
+	return false;
+}
+
 udManager._writeCache = function (task, data, cb){
 	fs.writeFile(UD_CACHE_PATH + "/" + task.md5sum, data, function(err) {
 		if(err) {
@@ -95,6 +105,10 @@ udManager.showStat = function (cb) {
 }
 
 udManager.getFileMeta = function (path, cb) {
+	if(udManager._isIllegalFileName(path)){
+		cb(null, {data: null});
+		return ;
+	}
 	var retry = function () {
 		if( udManager.FileMetaCache.hasOwnProperty(path) ){
 			cb(null, { data : udManager.FileMetaCache[path] });
@@ -114,6 +128,10 @@ udManager.getFileMeta = function (path, cb) {
 }
 
 udManager.getFileList = function (path, cb) {
+	if(udManager._isIllegalFileName(path)){
+		cb(null, {data: null});
+		return ;
+	}
 	var retry = function () {
 		if( udManager.FileListCache.hasOwnProperty(path) ){
 			cb(null, { data : udManager.FileListCache[path] });
