@@ -8,6 +8,6 @@ UD - link all your web storages together
 * brew install pkg-config
 
 ##### Linux
-* sudo apt-get install libcurl4-nss-dev libfuse-dev
+* sudo apt-get install libfuse-dev
 
 
