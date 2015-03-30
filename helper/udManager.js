@@ -1,4 +1,4 @@
-var pcs = require("../clouddrive/pcs");
+var webStorage;
 var async = require('async');
 var fs = require('fs');
 
@@ -66,10 +66,11 @@ udManager._readCache = function (path, buffer, offset, size, requestList, cb){
 	cb();
 }
 
-udManager.init = function(){
+udManager.init = function(webStorageModule){
 	this.FileMetaCache = {};
 	this.FileListCache = {};
 	this.FileDataCache = {};
+	webStorage = require("../clouddrive/" + webStorageModule);
 	this.FileDownloadQueue = async.queue(function (task, callback) {
 		console.log('  [B] ' + task.path + "|" + task.offset + '| downloading...');
 		task.status = "DOWNLOADING";
@@ -90,7 +91,7 @@ udManager.showStat = function (cb) {
 		if( udManager.QuotaCache ) {
 			cb(null, udManager.QuotaCache );
 		} else {
-			pcs.quota(function(error, response){
+			webStorage.quota(function(error, response){
 				if(error){
 					console.log("" + new Date () + "| " + error);
 					retry();
@@ -113,7 +114,7 @@ udManager.getFileMeta = function (path, cb) {
 		if( udManager.FileMetaCache.hasOwnProperty(path) ){
 			cb(null, { data : udManager.FileMetaCache[path] });
 		}else{
-			pcs.getFileMeta(path, function(error, response){
+			webStorage.getFileMeta(path, function(error, response){
 				if(error){
 					console.log("" + new Date () + "| " + error);
 					retry();
@@ -136,7 +137,7 @@ udManager.getFileList = function (path, cb) {
 		if( udManager.FileListCache.hasOwnProperty(path) ){
 			cb(null, { data : udManager.FileListCache[path] });
 		}else{
-			pcs.getFileList(path, function(error, response){
+			webStorage.getFileList(path, function(error, response){
 				if(error){
 					console.log("" + new Date () + "| " + error);
 					retry();
@@ -278,7 +279,7 @@ udManager.downloadFileInRangeByCache = function(path, buffer, offset, size, cb) 
 
 udManager.downloadFileInRange = function(path, offset, size, cb) {
 	var retry = function () {
-		pcs.getFileDownload(path, offset, size, function(error, response){
+		webStorage.getFileDownload(path, offset, size, function(error, response){
 			if(error){
 				console.log('[ERROR] retry, error happened: ' + error);
 				setTimeout(function () { retry(); }, 800);

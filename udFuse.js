@@ -125,7 +125,7 @@ function init(cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
 	console.log("File system started at " + options.mountPoint);
 	console.log("To stop it, type this in another shell: fusermount -u " + options.mountPoint);
-	udManager.init();
+	udManager.init(options.module);
 	cb();
 }
 
@@ -190,6 +190,7 @@ function usage() {
 	console.log("Options:");
 	console.log("-d                 : make FUSE print debug statements.");
 	console.log("-a                 : add allow_other option to mount (might need user_allow_other in system fuse config file).");
+	console.log("-m                 : specify web storage module. default: jsonfs");
 	console.log();
 	console.log("Example:");
 	console.log("node udFuse.fs -d /tmp/mnt");
@@ -203,16 +204,21 @@ function parseArgs() {
 		return false;
 	}
 	options.mountPoint = args[args.length - 1];
+	options.module = 'jsonfs';
 	remaining = args.length - 3;
-	i = 2;
-	while (remaining--) {
+	for( i = 2; remaining > 1; remaining--) {
 		if (args[i] === '-d') {
 			options.debugFuse = true;
 			++i;
 		} else if (args[i] === '-a') {
 			options.allowOthers = true;
 			++i;
-		} else return false;
+		} else if (args[i] === '-m') {
+			options.module = args[i+1];
+			i += 2;
+		} else {
+			return false;
+		}
 	}
 	return true;
 }

@@ -20,6 +20,6 @@ umountUd() {
 }
 
 umountUd
-node udFuse.js $MOUNTPATH
+node udFuse.js -m pcs $MOUNTPATH
 
 
