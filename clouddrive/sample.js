@@ -69,10 +69,10 @@ Sample.quota = function (cb){
 }
 
 Sample.getFileMeta = function (path, cb){
+  var meta = this._getMeta(path);
+  var result = meta ? {list: [meta]} : null;
   cb(null, {
-    data: {
-      list: [this._getMeta(path)]
-    }
+    data: result
   });
 }
 
