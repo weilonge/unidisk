@@ -1,5 +1,6 @@
 #!/bin/sh
 
+MODULE=$1
 UD_ROOT=/tmp/ud # $1
 MOUNTPATH=$UD_ROOT/root
 CACHEPATH=$UD_ROOT/cache
@@ -20,6 +21,6 @@ umountUd() {
 }
 
 umountUd
-node udFuse.js -m pcs $MOUNTPATH
+node udFuse.js -m $MODULE $MOUNTPATH
 
 
