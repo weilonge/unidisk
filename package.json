@@ -9,7 +9,7 @@
   "author": "Wei-Lun Lee (Sean)",
   "dependencies": {
     "async": "^0.9.0",
-    "fuse4js": "^0.1.9",
+    "fuse-bindings": "^2.1.2",
     "unirest": "^0.3.7"
   }
 }

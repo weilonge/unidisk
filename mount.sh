@@ -5,7 +5,7 @@ UD_ROOT=/tmp/ud # $1
 MOUNTPATH=$UD_ROOT/root
 CACHEPATH=$UD_ROOT/cache
 
-trap umountUd SIGINT
+#trap umountUd SIGINT
 
 mkdir -p $MOUNTPATH
 mkdir -p $CACHEPATH

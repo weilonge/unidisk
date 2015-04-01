@@ -1,4 +1,4 @@
-var f4js = require('fuse4js');
+var fuse = require('fuse-bindings')
 var fs = require('fs');
 var options = {};  // See parseArgs()
 var udManager = require('./helper/udManager');
@@ -67,7 +67,7 @@ function open(path, flags, cb) {
 	});
 }
 
-function read(path, offset, len, buf, fh, cb) {
+function read(path, fd, buf, len, offset, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	udManager.getFileMeta(path, function (error, response){
 		var err = 0; // assume success
@@ -135,7 +135,7 @@ function setxattr(path, name, value, size, a, b, c) {
 	cb(0);
 }
 
-function statfs(cb) {
+function statfs(path, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
 	udManager.showStat(function(error, response){
 		var block_size = 4096;
@@ -234,7 +234,7 @@ function parseArgs() {
 				opts.push('-o');
 				opts.push('allow_other');
 			}
-			f4js.start(options.mountPoint, handlers, options.debugFuse, opts);
+			fuse.mount(options.mountPoint, handlers);
 		} catch (e) {
 			console.log("Exception when starting file system: " + e);
 		}
@@ -242,3 +242,10 @@ function parseArgs() {
 		usage();
 	}
 })();
+
+process.on('SIGINT', function () {
+  fuse.unmount(options.mountPoint, function () {
+    process.exit();
+  });
+});
+
