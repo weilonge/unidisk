@@ -1,6 +1,7 @@
 var webStorage;
 var async = require('async');
 var fs = require('fs');
+var MetaCache = require('./metaCache');
 
 var UD_BLOCK_SIZE = 1*1024*1024;
 var UD_QUEUE_SIZE = 3;
@@ -67,8 +68,6 @@ udManager._readCache = function (path, buffer, offset, size, requestList, cb){
 }
 
 udManager.init = function(webStorageModule){
-	this.FileMetaCache = {};
-	this.FileListCache = {};
 	this.FileDataCache = {};
 	webStorage = require("../clouddrive/" + webStorageModule);
 	this.FileDownloadQueue = async.queue(function (task, callback) {
@@ -111,15 +110,16 @@ udManager.getFileMeta = function (path, cb) {
 		return ;
 	}
 	var retry = function () {
-		if( udManager.FileMetaCache.hasOwnProperty(path) ){
-			cb(null, { data : udManager.FileMetaCache[path] });
+		var meta = MetaCache.getMeta(path);
+		if (meta) {
+			cb(null, { data : meta });
 		}else{
 			webStorage.getFileMeta(path, function(error, response){
 				if(error){
 					console.log("" + new Date () + "| " + error);
 					retry();
 				}else{
-					udManager.FileMetaCache[path] = response.data;
+					MetaCache.updateMeta(path, response.data);
 					cb(error, response);
 				}
 			});
@@ -134,15 +134,16 @@ udManager.getFileList = function (path, cb) {
 		return ;
 	}
 	var retry = function () {
-		if( udManager.FileListCache.hasOwnProperty(path) ){
-			cb(null, { data : udManager.FileListCache[path] });
+		var list = MetaCache.getList(path);
+		if (list) {
+			cb(null, { data : list });
 		}else{
 			webStorage.getFileList(path, function(error, response){
 				if(error){
 					console.log("" + new Date () + "| " + error);
 					retry();
 				}else{
-					udManager.FileListCache[path] = response.data;
+					MetaCache.updateList(path, response.data);
 					cb(error, response);
 				}
 			});
