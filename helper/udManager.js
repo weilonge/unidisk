@@ -20,6 +20,7 @@ udManager._isIllegalFileName = function (path) {
 }
 
 udManager.init = function(webStorageModule){
+	MetaCache.init();
 	DataCache.init(UD_BLOCK_SIZE);
 	webStorage = require("../clouddrive/" + webStorageModule);
 	this.FileDownloadQueue = async.queue(function (task, callback) {
@@ -62,7 +63,7 @@ udManager.getFileMeta = function (path, cb) {
 		return ;
 	}
 	var retry = function () {
-		var meta = MetaCache.getMeta(path);
+		var meta = MetaCache.get(path);
 		if (meta) {
 			cb(null, { data : meta });
 		}else{
@@ -71,7 +72,7 @@ udManager.getFileMeta = function (path, cb) {
 					console.log("" + new Date () + "| " + error);
 					retry();
 				}else{
-					MetaCache.updateMeta(path, response.data);
+					MetaCache.update(path, response.data);
 					cb(error, response);
 				}
 			});

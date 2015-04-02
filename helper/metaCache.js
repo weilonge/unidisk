@@ -1,13 +1,15 @@
 var MetaCache = {};
 
-MetaCache._fileMetaCache = {};
-MetaCache._fileListCache = {};
+MetaCache.init = function (){
+  this._fileMetaCache = {};
+  this._fileListCache = {};
+};
 
-MetaCache.updateMeta = function (path, data) {
+MetaCache.update = function (path, data) {
   this._fileMetaCache[path] = data;
 };
 
-MetaCache.getMeta = function (path) {
+MetaCache.get = function (path) {
   if (this._fileMetaCache.hasOwnProperty(path)) {
     return this._fileMetaCache[path];
   }
