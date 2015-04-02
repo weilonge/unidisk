@@ -206,7 +206,7 @@ pcs.getAccessToken = function (api_key, api_secret, cb){
 	}
 
 	function request2nd (error, response){
-		var msg = response.data;
+		var msg = response ? response.data : {};
 		if (msg.verification_url && msg.user_code) {
 			console.log(msg.verification_url);
 			console.log(msg.user_code);
@@ -229,13 +229,7 @@ pcs.getAccessToken = function (api_key, api_secret, cb){
 	function requestEnd (error, response){
 		if(response.data.error === 'authorization_pending'){
 			console.log('waiting for verification...');
-			setTimeout(function (){
-				request2nd(null, {
-					data:{
-						device_code: device_code
-					}
-				});
-			}, interval * 1000);
+			setTimeout(request2nd, interval * 1000);
 		} else if (response.data.access_token){
 			console.log(response.data.access_token);
 		} else {
