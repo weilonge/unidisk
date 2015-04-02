@@ -168,4 +168,82 @@ pcs.getFileListRecycle = function (cb){
 	}, cb);
 }
 
+
+pcs._tokenRequest = function (link, cb){
+	unirest.get(link)
+	.header('Accept', 'application/json')
+	.proxy(XFR_PROXY)
+	.timeout(XFR_CONNECTION_TIMEOUT * 1000)
+	.end(function (httpResponse) {
+		var errorOutput = null;
+		var response = {
+			data: null
+		};
+		if (httpResponse.serverError) {
+			errorOutput = httpResponse.body;
+			console.log({
+				code: httpResponse.code,
+				status: httpResponse.status,
+				statusType: httpResponse.statusType
+			});
+		} else {
+			response.data = httpResponse.body;
+		}
+		cb(errorOutput, response);
+	});
+};
+
+pcs.getAccessToken = function (api_key, api_secret, cb){
+	var self = this;
+	var device_code = null;
+	var interval = 10;
+
+	function request1st (){
+		var link = 'https://openapi.baidu.com/oauth/2.0/device/code?' +
+			'client_id=' + api_key + '&' +
+			'response_type=device_code&scope=basic,netdisk';
+		self._tokenRequest(link, request2nd);
+	}
+
+	function request2nd (error, response){
+		var msg = response.data;
+		if (msg.verification_url && msg.user_code) {
+			console.log(msg.verification_url);
+			console.log(msg.user_code);
+		}
+		if (msg.interval) {
+			interval = msg.interval;
+		}
+		if (msg.device_code) {
+			device_code = msg.device_code;
+		}
+		var link = 'https://openapi.baidu.com/oauth/2.0/token?' +
+			'grant_type=device_token&' +
+			'code=' + device_code + '&' +
+			'client_id=' + api_key + '&' +
+			'client_secret=' + api_secret;
+
+		self._tokenRequest(link, requestEnd);
+	}
+
+	function requestEnd (error, response){
+		if(response.data.error === 'authorization_pending'){
+			console.log('waiting for verification...');
+			setTimeout(function (){
+				request2nd(null, {
+					data:{
+						device_code: device_code
+					}
+				});
+			}, interval * 1000);
+		} else if (response.data.access_token){
+			console.log(response.data.access_token);
+		} else {
+			console.error('Unknown Error');
+		}
+	}
+
+	request1st();
+};
+
 module.exports = pcs;
