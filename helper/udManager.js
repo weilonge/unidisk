@@ -1,11 +1,10 @@
 var webStorage;
 var async = require('async');
-var fs = require('fs');
 var MetaCache = require('./metaCache');
+var DataCache = require('./dataCache');
 
 var UD_BLOCK_SIZE = 1*1024*1024;
 var UD_QUEUE_SIZE = 3;
-var UD_CACHE_PATH = "/tmp/ud/cache";
 var UD_PREFETCH_SIZE = 10 * UD_BLOCK_SIZE;
 
 var udManager = {};
@@ -20,55 +19,8 @@ udManager._isIllegalFileName = function (path) {
 	return false;
 }
 
-udManager._writeCache = function (task, data, cb){
-	fs.writeFile(UD_CACHE_PATH + "/" + task.md5sum, data, function(err) {
-		if(err) {
-			console.log(err);
-		} else {
-			console.log("The file was saved!");
-		}
-		cb();
-	});
-}
-
-udManager._readCache = function (path, buffer, offset, size, requestList, cb){
-	var seek = 0,
-		writeSize = 0,
-		cursor_moved = 0;
-
-	for(var i in requestList ){
-		var task = requestList[i];
-		if( task.priority === "PREFETCH" ){
-			continue;
-		}
-		if( this.FileDataCache[task.md5sum] && this.FileDataCache[task.md5sum].status === "DONE" ){
-			seek = ( offset + cursor_moved ) % UD_BLOCK_SIZE;
-			writeSize = UD_BLOCK_SIZE - seek;
-			if( (writeSize + cursor_moved ) > size ){
-				writeSize = size - cursor_moved;
-			}
-
-			var fd = fs.openSync(UD_CACHE_PATH + "/" + task.md5sum, "rs");
-			fs.readSync(fd, buffer, cursor_moved, writeSize, seek);
-			fs.closeSync(fd);
-
-			cursor_moved += writeSize ;
-		} else {
-			console.error("======= Critical Error =======");
-			console.error(path);
-			console.error(offset);
-			console.error(size);
-			console.error(requestList);
-			console.error(this.FileDataCache);
-
-			throw Error("data is not finished.");
-		}
-	}
-	cb();
-}
-
 udManager.init = function(webStorageModule){
-	this.FileDataCache = {};
+	DataCache.init(UD_BLOCK_SIZE);
 	webStorage = require("../clouddrive/" + webStorageModule);
 	this.FileDownloadQueue = async.queue(function (task, callback) {
 		console.log('  [B] ' + task.path + "|" + task.offset + '| downloading...');
@@ -77,8 +29,8 @@ udManager.init = function(webStorageModule){
 			console.log(task.path + "|" + task.offset + '| done!! ' + response.data.length);
 
 			// Write the buffer to the cache file.
-			udManager._writeCache(task, response.data, function(){
-				udManager.FileDataCache[task.md5sum].status = "DONE";
+			DataCache.writeCache(task, response.data, function(){
+				DataCache.updateStatus(task.md5sum, 'DONE');
 				callback();
 			});
 		});
@@ -152,13 +104,6 @@ udManager.getFileList = function (path, cb) {
 	retry();
 }
 
-udManager._genmd5sum = function (task){
-	var crypto = require('crypto');
-	var name = task.path + "" + task.offset + "";
-	var hash = crypto.createHash('md5').update(name).digest('hex');
-	return hash;
-}
-
 udManager._generateRequestList = function(fileMeta, offset, size, fileSize){
 	const endPos = offset + size;
 	var requestList = [];
@@ -175,7 +120,7 @@ udManager._generateRequestList = function(fileMeta, offset, size, fileSize){
 			offset: alignedOffset,
 			size: ((alignedOffset + UD_BLOCK_SIZE) > fileSize ? (fileSize - alignedOffset) : UD_BLOCK_SIZE )
 		};
-		var taskMd5sum = this._genmd5sum(task);
+		var taskMd5sum = DataCache.generateKey(task);
 		task.md5sum = taskMd5sum;
 
 		requestList.push(task);
@@ -193,7 +138,7 @@ udManager._generateRequestList = function(fileMeta, offset, size, fileSize){
 			offset: alignedOffset,
 			size: ((alignedOffset + UD_BLOCK_SIZE) > fileSize ? (fileSize - alignedOffset) : UD_BLOCK_SIZE )
 		};
-		var taskMd5sum = this._genmd5sum(task);
+		var taskMd5sum = DataCache.generateKey(task);
 		task.md5sum = taskMd5sum;
 
 		requestList.push(task);
@@ -210,7 +155,8 @@ udManager._isAllRequestDone = function (downloadRequest){
 		if( task.priority === "PREFETCH" ){
 			continue;
 		}
-		if(this.FileDataCache[taskMd5sum] && this.FileDataCache[taskMd5sum].status === "DONE" ){
+		var data = DataCache.get(taskMd5sum);
+		if (data && data.status === 'DONE') {
 			// do nothing.
 		}else{
 			done = false;
@@ -223,18 +169,19 @@ udManager._isAllRequestDone = function (downloadRequest){
 udManager._requestPushAndDownload = function (path, downloadRequest, cb){
 	async.each(downloadRequest, function(task, callback){
 		var taskMd5sum = task.md5sum;
+		var data = DataCache.get(taskMd5sum);
 
-		if(udManager.FileDataCache[taskMd5sum]){
-			console.log('  [C1] ' + udManager.FileDataCache[taskMd5sum].path + " is in cache: " + udManager.FileDataCache[taskMd5sum].status + "| " + task.offset);
+		if (data) {
+			console.log('  [C1] ' + data.path + " is in cache: " + data.status + "| " + task.offset);
 			callback();
 		} else if ( task.priority === "PREFETCH" ) {
-			udManager.FileDataCache[taskMd5sum] = task;
+			DataCache.update(taskMd5sum, task);
 			udManager.FileDownloadQueue.push(task, function (err){
 				console.log('  [C3] ' + 'pushed task is done.');
 			});
 			callback();
 		}else{
-			udManager.FileDataCache[taskMd5sum] = task;
+			DataCache.update(taskMd5sum, task);
 			udManager.FileDownloadQueue.push(task, function (err){
 				console.log('  [C2] ' + 'pushed task is done.');
 				callback();
@@ -269,7 +216,7 @@ udManager.downloadFileInRangeByCache = function(path, buffer, offset, size, cb) 
 		udManager._requestPushAndDownload(path, requestList, function(){
 			// 3. All requests are done. Aggregate all data.
 			// Read the request data from files.
-			udManager._readCache(path, buffer, offset, size, requestList, function(){
+			DataCache.readCache(path, buffer, offset, size, requestList, function(){
 				console.log('  [E] data is prepared.');
 				console.log('}}');
 				cb(null);
