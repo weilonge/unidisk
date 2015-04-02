@@ -1,7 +1,4 @@
-var webStorage;
 var async = require('async');
-var MetaCache = require('./metaCache');
-var DataCache = require('./dataCache');
 
 var UD_BLOCK_SIZE = 1*1024*1024;
 var UD_QUEUE_SIZE = 3;
@@ -21,31 +18,35 @@ udManager._isIllegalFileName = function (path) {
 
 udManager.queueHandler = function (task, callback) {
 	console.log('  [B] ' + task.path + "|" + task.offset + '| downloading...');
+	var self = this;
 	task.status = "DOWNLOADING";
 	this.downloadFileInRange(task.path, task.offset, task.size, function(error, response){
 		console.log(task.path + "|" + task.offset + '| done!! ' + response.data.length);
 
 		// Write the buffer to the cache file.
-		DataCache.writeCache(task, response.data, function(){
+		self.dataCache.writeCache(task, response.data, function(){
 			callback();
 		});
 	});
 };
 
-udManager.init = function(webStorageModule){
-	MetaCache.init();
-	DataCache.init(UD_BLOCK_SIZE);
-	webStorage = require("../clouddrive/" + webStorageModule);
+udManager.init = function(options){
+	this.webStorage = options.webStorageModule;
+	this.metaCache = options.metaCacheModule;
+	this.dataCache = options.dataCacheModule;
+	this.metaCache.init();
+	this.dataCache.init(UD_BLOCK_SIZE);
 	this.FileDownloadQueue = async.queue(
 		this.queueHandler.bind(this), UD_QUEUE_SIZE);
 }
 
 udManager.showStat = function (cb) {
+	var self = this;
 	var retry = function () {
 		if( udManager.QuotaCache ) {
 			cb(null, udManager.QuotaCache );
 		} else {
-			webStorage.quota(function(error, response){
+			self.webStorage.quota(function(error, response){
 				if(error){
 					console.log("" + new Date () + "| " + error);
 					retry();
@@ -64,17 +65,18 @@ udManager.getFileMeta = function (path, cb) {
 		cb(null, {data: null});
 		return ;
 	}
+	var self = this;
 	var retry = function () {
-		var meta = MetaCache.get(path);
+		var meta = self.metaCache.get(path);
 		if (meta) {
 			cb(null, { data : meta });
 		}else{
-			webStorage.getFileMeta(path, function(error, response){
+			self.webStorage.getFileMeta(path, function(error, response){
 				if(error){
 					console.log("" + new Date () + "| " + error);
 					retry();
 				}else{
-					MetaCache.update(path, response.data);
+					self.metaCache.update(path, response.data);
 					cb(error, response);
 				}
 			});
@@ -88,17 +90,18 @@ udManager.getFileList = function (path, cb) {
 		cb(null, {data: null});
 		return ;
 	}
+	var self = this;
 	var retry = function () {
-		var list = MetaCache.getList(path);
+		var list = self.metaCache.getList(path);
 		if (list) {
 			cb(null, { data : list });
 		}else{
-			webStorage.getFileList(path, function(error, response){
+			self.webStorage.getFileList(path, function(error, response){
 				if(error){
 					console.log("" + new Date () + "| " + error);
 					retry();
 				}else{
-					MetaCache.updateList(path, response.data);
+					self.metaCache.updateList(path, response.data);
 					cb(error, response);
 				}
 			});
@@ -123,7 +126,7 @@ udManager._generateRequestList = function(fileMeta, offset, size, fileSize){
 			offset: alignedOffset,
 			size: ((alignedOffset + UD_BLOCK_SIZE) > fileSize ? (fileSize - alignedOffset) : UD_BLOCK_SIZE )
 		};
-		var taskMd5sum = DataCache.generateKey(task);
+		var taskMd5sum = this.dataCache.generateKey(task);
 		task.md5sum = taskMd5sum;
 
 		requestList.push(task);
@@ -141,7 +144,7 @@ udManager._generateRequestList = function(fileMeta, offset, size, fileSize){
 			offset: alignedOffset,
 			size: ((alignedOffset + UD_BLOCK_SIZE) > fileSize ? (fileSize - alignedOffset) : UD_BLOCK_SIZE )
 		};
-		var taskMd5sum = DataCache.generateKey(task);
+		var taskMd5sum = this.dataCache.generateKey(task);
 		task.md5sum = taskMd5sum;
 
 		requestList.push(task);
@@ -158,7 +161,7 @@ udManager._isAllRequestDone = function (downloadRequest){
 		if( task.priority === "PREFETCH" ){
 			continue;
 		}
-		var data = DataCache.get(taskMd5sum);
+		var data = this.dataCache.get(taskMd5sum);
 		if (data && data.status === 'DONE') {
 			// do nothing.
 		}else{
@@ -170,21 +173,22 @@ udManager._isAllRequestDone = function (downloadRequest){
 }
 
 udManager._requestPushAndDownload = function (path, downloadRequest, cb){
+	var self = this;
 	async.each(downloadRequest, function(task, callback){
 		var taskMd5sum = task.md5sum;
-		var data = DataCache.get(taskMd5sum);
+		var data = self.dataCache.get(taskMd5sum);
 
 		if (data) {
 			console.log('  [C1] ' + data.path + " is in cache: " + data.status + "| " + task.offset);
 			callback();
 		} else if ( task.priority === "PREFETCH" ) {
-			DataCache.update(taskMd5sum, task);
+			self.dataCache.update(taskMd5sum, task);
 			udManager.FileDownloadQueue.push(task, function (err){
 				console.log('  [C3] ' + 'pushed task is done.');
 			});
 			callback();
 		}else{
-			DataCache.update(taskMd5sum, task);
+			self.dataCache.update(taskMd5sum, task);
 			udManager.FileDownloadQueue.push(task, function (err){
 				console.log('  [C2] ' + 'pushed task is done.');
 				callback();
@@ -208,6 +212,7 @@ udManager._requestPushAndDownload = function (path, downloadRequest, cb){
 udManager.downloadFileInRangeByCache = function(path, buffer, offset, size, cb) {
 	console.log('{{');
 	console.log('  [A] ' + path + ' ' + offset + ' ' + size);
+	var self = this;
 	udManager.getFileMeta(path, function(error, response){
 		const totalSize = response.data.list[0].size;
 		// 1. Split the download request.
@@ -217,7 +222,7 @@ udManager.downloadFileInRangeByCache = function(path, buffer, offset, size, cb) 
 		udManager._requestPushAndDownload(path, requestList, function(){
 			// 3. All requests are done. Aggregate all data.
 			// Read the request data from files.
-			DataCache.readCache(path, buffer, offset, size, requestList, function(){
+			self.dataCache.readCache(path, buffer, offset, size, requestList, function(){
 				console.log('  [E] data is prepared.');
 				console.log('}}');
 				cb(null);
@@ -227,8 +232,9 @@ udManager.downloadFileInRangeByCache = function(path, buffer, offset, size, cb) 
 }
 
 udManager.downloadFileInRange = function(path, offset, size, cb) {
+	var self = this;
 	var retry = function () {
-		webStorage.getFileDownload(path, offset, size, function(error, response){
+		self.webStorage.getFileDownload(path, offset, size, function(error, response){
 			if(error){
 				console.log('[ERROR] retry, error happened: ' + error);
 				setTimeout(retry , 800);
