@@ -19,23 +19,25 @@ udManager._isIllegalFileName = function (path) {
 	return false;
 }
 
+udManager.queueHandler = function (task, callback) {
+	console.log('  [B] ' + task.path + "|" + task.offset + '| downloading...');
+	task.status = "DOWNLOADING";
+	this.downloadFileInRange(task.path, task.offset, task.size, function(error, response){
+		console.log(task.path + "|" + task.offset + '| done!! ' + response.data.length);
+
+		// Write the buffer to the cache file.
+		DataCache.writeCache(task, response.data, function(){
+			callback();
+		});
+	});
+};
+
 udManager.init = function(webStorageModule){
 	MetaCache.init();
 	DataCache.init(UD_BLOCK_SIZE);
 	webStorage = require("../clouddrive/" + webStorageModule);
-	this.FileDownloadQueue = async.queue(function (task, callback) {
-		console.log('  [B] ' + task.path + "|" + task.offset + '| downloading...');
-		task.status = "DOWNLOADING";
-		udManager.downloadFileInRange(task.path, task.offset, task.size, function(error, response){
-			console.log(task.path + "|" + task.offset + '| done!! ' + response.data.length);
-
-			// Write the buffer to the cache file.
-			DataCache.writeCache(task, response.data, function(){
-				DataCache.updateStatus(task.md5sum, 'DONE');
-				callback();
-			});
-		});
-	}, UD_QUEUE_SIZE);
+	this.FileDownloadQueue = async.queue(
+		this.queueHandler.bind(this), UD_QUEUE_SIZE);
 }
 
 udManager.showStat = function (cb) {
@@ -196,9 +198,7 @@ udManager._requestPushAndDownload = function (path, downloadRequest, cb){
 				cb();
 			}else {
 				console.log("retry to wait all requests done...");
-				setTimeout(function () {
-					retry();
-				}, 1000);
+				setTimeout(retry, 1000);
 			}
 		}
 		retry();
@@ -231,13 +231,13 @@ udManager.downloadFileInRange = function(path, offset, size, cb) {
 		webStorage.getFileDownload(path, offset, size, function(error, response){
 			if(error){
 				console.log('[ERROR] retry, error happened: ' + error);
-				setTimeout(function () { retry(); }, 800);
+				setTimeout(retry , 800);
 			}else if( !response || !response.data || !response.data instanceof Buffer ){
 				console.log('[ERROR] retry, error response: ' + response);
-				setTimeout(function () { retry(); }, 800);
+				setTimeout(retry , 800);
 			}else if( size != response.data.length ){
 				console.log('[ERROR] retry, size error: ' + offset + " " + size + " " + response.data.length + " " + response.data);
-				setTimeout(function () { retry(); }, 800);
+				setTimeout(retry , 800);
 			}else{
 				cb(error, response);
 			}

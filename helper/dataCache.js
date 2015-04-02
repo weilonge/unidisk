@@ -24,10 +24,12 @@ DataCache.get = function (md5sum) {
 };
 
 DataCache.writeCache = function (task, data, cb){
+  var self = this;
   fs.writeFile(this._CACHE_PATH + '/' + task.md5sum, data, function(err) {
     if(err) {
       console.log(err);
     } else {
+      self.updateStatus(task.md5sum, 'DONE');
       console.log('The file was saved!');
     }
     cb();
