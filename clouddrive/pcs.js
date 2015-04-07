@@ -10,9 +10,19 @@ var PCS_HOSTNAME_D = "pcs.baidu.com"; // "d.pcs.baidu.com";
 var PCS_HOSTNAME_C = "c.pcs.baidu.com";
 var PCSURI = "/rest/2.0/pcs";
 var UD_ROOTPATH = "/apps/APP_ROOT"
-var USERTOKEN = require('fs').readFileSync( process.env.HOME + '/.baidu_pcs_token' );
 
 var pcs = {};
+
+pcs.init = function (){
+	var tokenFileName = process.env.HOME + '/.baidu_pcs_token';
+	try {
+		var fs = require('fs');
+		var stats = fs.statSync(tokenFileName);
+		this.USERTOKEN = stats.isFile() ? fs.readFileSync( tokenFileName ) : null;
+	} catch (e) {
+		this.USERTOKEN = null;
+	}
+};
 
 pcs._trimRootPath = function (fileMeta){
 	if(fileMeta.list){
@@ -29,7 +39,7 @@ pcs._trimRootPath = function (fileMeta){
 pcs._generatePath = function (options){
 	var path = "";
 	path += PCSURI + "/" + encodeURIComponent(options.cmd);
-	path += "?access_token=" + encodeURIComponent(USERTOKEN);
+	path += "?access_token=" + encodeURIComponent(this.USERTOKEN);
 
 	if( options.method ) path += "&method=" + encodeURIComponent(options.method);
 	if( options.path ) path += "&path=" + encodeURIComponent(options.path);

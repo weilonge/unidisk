@@ -1,8 +1,18 @@
 var readline = require('readline');
 var unirest = require('unirest');
-var USERTOKEN = require('fs').readFileSync( process.env.HOME + '/.dropbox_token' );
 
 var Dropbox = {};
+
+Dropbox.init = function (){
+  var tokenFileName = process.env.HOME + '/.dropbox_token';
+  try {
+    var fs = require('fs');
+    var stats = fs.statSync(tokenFileName);
+    this.USERTOKEN = stats.isFile() ? fs.readFileSync( tokenFileName ) : null;
+  } catch (e) {
+    this.USERTOKEN = null;
+  }
+};
 
 Dropbox._handleJson = function (httpResponse, cb){
   var errorOutput = null;
@@ -25,7 +35,7 @@ Dropbox._handleJson = function (httpResponse, cb){
 Dropbox.quota = function (cb){
   var self = this;
   unirest.get('https://api.dropbox.com/1/account/info')
-  .header('Authorization', 'Bearer ' + USERTOKEN)
+  .header('Authorization', 'Bearer ' + self.USERTOKEN)
   .header('Accept', 'application/json')
   .end(function (httpResponse) {
     self._handleJson(httpResponse, function (error, response){
@@ -58,7 +68,7 @@ Dropbox._convertItem = function (data){
 Dropbox.getFileMeta = function (path, cb){
   var self = this;
   unirest.get('https://api.dropbox.com/1/metadata/auto' + path)
-  .header('Authorization', 'Bearer ' + USERTOKEN)
+  .header('Authorization', 'Bearer ' + self.USERTOKEN)
   .header('Accept', 'application/json')
   .query({
     list: false
@@ -83,7 +93,7 @@ Dropbox.getFileMeta = function (path, cb){
 Dropbox.getFileList = function (path, cb){
   var self = this;
   unirest.get('https://api.dropbox.com/1/metadata/auto' + path)
-  .header('Authorization', 'Bearer ' + USERTOKEN)
+  .header('Authorization', 'Bearer ' + self.USERTOKEN)
   .header('Accept', 'application/json')
   .query({
     list: true
@@ -113,7 +123,7 @@ Dropbox.getFileList = function (path, cb){
 Dropbox.getFileDownload = function (path, offset, size, cb){
   var self = this;
   unirest.get('https://api-content.dropbox.com/1/files/auto' + path)
-  .header('Authorization', 'Bearer ' + USERTOKEN)
+  .header('Authorization', 'Bearer ' + self.USERTOKEN)
   .header('Range', 'bytes=' + offset + '-' + ( offset + size - 1 ))
   .encoding(null)
   .end(function (httpResponse) {

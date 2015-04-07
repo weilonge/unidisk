@@ -34,6 +34,8 @@ udManager.init = function(options){
 	this.webStorage = options.webStorageModule;
 	this.metaCache = options.metaCacheModule;
 	this.dataCache = options.dataCacheModule;
+
+	this.webStorage.init();
 	this.metaCache.init();
 	this.dataCache.init(UD_BLOCK_SIZE);
 	this.FileDownloadQueue = async.queue(
