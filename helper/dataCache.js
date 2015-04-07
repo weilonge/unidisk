@@ -3,13 +3,54 @@ var fs = require('fs');
 var DataCache = {};
 
 DataCache.init = function (blockSize) {
-  this._BLOCK_SIZE = blockSize;
-  this._fileDataCache = {};
   this._CACHE_PATH = '/tmp/ud/cache';
+  this._MAX_DATA_CACHE_ENTRY = 50;
+  this._BLOCK_SIZE = blockSize;
+
+  this._fileDataCache = {};
+  this._priorityQueue = [];
 };
 
-DataCache.update = function (md5sum, data) {
-  this._fileDataCache[md5sum] = data;
+DataCache.update = function (key, data) {
+  if (this._fileDataCache.hasOwnProperty(key) ) {
+    // Update an exist cache entry.
+    this._updateEntry(key, data);
+  } else {
+    // Add a new data cache.
+    if (this._priorityQueue.length < this._MAX_DATA_CACHE_ENTRY) {
+      // Entry is sufficient to add a new one.
+      this._pushEntry(key, data);
+    } else {
+      // Remove an entry and delete cache file.
+      var deletingCandidateKey = this._popLowPriorityKey();
+      this._removeEntry(deletingCandidateKey);
+      this._pushEntry(key, data);
+    }
+  }
+};
+
+DataCache._updateEntry = function (key, data) {
+  this._fileDataCache[key] = data;
+};
+
+DataCache._pushEntry = function (key, data) {
+  this._fileDataCache[key] = data;
+  this._priorityQueue.push(key);
+};
+
+DataCache._removeEntry = function (key) {
+  var fileName = this._CACHE_PATH + '/' + key;
+
+  delete this._fileDataCache[key];
+
+  fs.unlink(fileName, function (err){
+    if (err) throw err;
+    console.log('successfully deleted ' + fileName);
+  });
+};
+
+DataCache._popLowPriorityKey = function () {
+  return this._priorityQueue.shift();
 };
 
 DataCache.updateStatus = function (md5sum, status) {
