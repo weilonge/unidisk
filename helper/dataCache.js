@@ -1,11 +1,12 @@
-var fs = require('fs');
-
 var DataCache = {};
 
 DataCache.init = function (blockSize) {
   this._CACHE_PATH = '/tmp/ud/cache';
-  this._MAX_DATA_CACHE_ENTRY = 50;
+  this._MAX_DATA_CACHE_ENTRY = 25;
   this._BLOCK_SIZE = blockSize;
+
+  this._dataStore = require('./diskDataStore');
+  this._dataStore.init();
 
   this._fileDataCache = {};
   this._priorityQueue = [];
@@ -39,14 +40,8 @@ DataCache._pushEntry = function (key, data) {
 };
 
 DataCache._removeEntry = function (key) {
-  var fileName = this._CACHE_PATH + '/' + key;
-
   delete this._fileDataCache[key];
-
-  fs.unlink(fileName, function (err){
-    if (err) throw err;
-    console.log('successfully deleted ' + fileName);
-  });
+  this._dataStore.deleteEntry(key);
 };
 
 DataCache._popLowPriorityKey = function () {
@@ -66,7 +61,7 @@ DataCache.get = function (md5sum) {
 
 DataCache.writeCache = function (task, data, cb){
   var self = this;
-  fs.writeFile(this._CACHE_PATH + '/' + task.md5sum, data, function(err) {
+  this._dataStore.writeEntry(task.md5sum, data, function(err) {
     if(err) {
       console.log(err);
     } else {
@@ -95,9 +90,8 @@ DataCache.readCache = function (path, buffer, offset, size, requestList, cb){
         writeSize = size - cursor_moved;
       }
 
-      var fd = fs.openSync(this._CACHE_PATH + '/' + task.md5sum, 'rs');
-      fs.readSync(fd, buffer, cursor_moved, writeSize, seek);
-      fs.closeSync(fd);
+      this._dataStore.readEntry(task.md5sum,
+        buffer, cursor_moved, seek, writeSize);
 
       cursor_moved += writeSize ;
     } else {
