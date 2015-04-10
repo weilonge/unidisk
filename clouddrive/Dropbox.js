@@ -1,5 +1,6 @@
 var unirest = require('unirest');
 var Settings = require('../helper/Settings');
+var XMLHttpRequest = require('xhr2');
 
 var Dropbox = {};
 
@@ -7,31 +8,39 @@ Dropbox.init = function (){
   this.USERTOKEN = Settings.get('dropbox_token');
 };
 
-Dropbox._handleJson = function (httpResponse, cb){
-  var errorOutput = null;
+Dropbox._handleJson = function (xmlhttp, cb){
+  if(xmlhttp.readyState !== 4)
+    return ;
+
   var response = {
     data: null
   };
-  if (httpResponse.serverError) {
-    errorOutput = httpResponse.body;
-    console.log({
-      code: httpResponse.code,
-      status: httpResponse.status,
-      statusType: httpResponse.statusType
-    });
+  if (xmlhttp.status == 200) {
+    try {
+      response.data = JSON.parse(xmlhttp.responseText);
+      cb(null, response);
+    } catch (e) {
+      cb({
+        error: 'parsing failed.'
+      }, response);
+    }
+  } else if (xmlhttp.status == 404){
+    cb(null, response); // File not found
   } else {
-    response.data = httpResponse.body;
+    cb({
+      error: 'http status: ' + xmlhttp.status
+    }, response);
   }
-  cb(errorOutput, response);
 };
 
 Dropbox.quota = function (cb){
   var self = this;
-  unirest.get('https://api.dropbox.com/1/account/info')
-  .header('Authorization', 'Bearer ' + self.USERTOKEN)
-  .header('Accept', 'application/json')
-  .end(function (httpResponse) {
-    self._handleJson(httpResponse, function (error, response){
+  var xmlhttp = new XMLHttpRequest();
+  xmlhttp.open('get', 'https://api.dropbox.com/1/account/info', true);
+  xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+  xmlhttp.setRequestHeader('Accept', 'application/json');
+  xmlhttp.onreadystatechange = function () {
+    self._handleJson(xmlhttp, function (error, response){
       if (response.data) {
         var quotaInfo = response.data.quota_info;
         var result = {
@@ -45,7 +54,9 @@ Dropbox.quota = function (cb){
         cb(error, response);
       }
     });
-  });
+  };
+
+  xmlhttp.send();
 };
 
 Dropbox._convertItem = function (data){
@@ -64,14 +75,12 @@ Dropbox._convertItem = function (data){
 
 Dropbox.getFileMeta = function (path, cb){
   var self = this;
-  unirest.get('https://api.dropbox.com/1/metadata/auto' + path)
-  .header('Authorization', 'Bearer ' + self.USERTOKEN)
-  .header('Accept', 'application/json')
-  .query({
-    list: false
-  })
-  .end(function (httpResponse) {
-    self._handleJson(httpResponse, function (error, response){
+  var xmlhttp = new XMLHttpRequest();
+  xmlhttp.open('get', 'https://api.dropbox.com/1/metadata/auto' + path, true);
+  xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+  xmlhttp.setRequestHeader('Accept', 'application/json');
+  xmlhttp.onreadystatechange = function () {
+    self._handleJson(xmlhttp, function (error, response){
       if (response.data) {
         var data = response.data;
         var result = {
@@ -84,19 +93,19 @@ Dropbox.getFileMeta = function (path, cb){
         cb(error, response);
       }
     });
-  });
+  };
+
+  xmlhttp.send('list=false');
 };
 
 Dropbox.getFileList = function (path, cb){
   var self = this;
-  unirest.get('https://api.dropbox.com/1/metadata/auto' + path)
-  .header('Authorization', 'Bearer ' + self.USERTOKEN)
-  .header('Accept', 'application/json')
-  .query({
-    list: true
-  })
-  .end(function (httpResponse) {
-    self._handleJson(httpResponse, function (error, response){
+  var xmlhttp = new XMLHttpRequest();
+  xmlhttp.open('get', 'https://api.dropbox.com/1/metadata/auto' + path, true);
+  xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+  xmlhttp.setRequestHeader('Accept', 'application/json');
+  xmlhttp.onreadystatechange = function () {
+    self._handleJson(xmlhttp, function (error, response){
       if (response.data) {
         var data = response.data;
         var resultList = [];
@@ -114,32 +123,28 @@ Dropbox.getFileList = function (path, cb){
         cb(error, response);
       }
     });
-  });
+  };
+
+  xmlhttp.send('list=true');
 };
 
 Dropbox.getFileDownload = function (path, offset, size, cb){
   var self = this;
-  unirest.get('https://api-content.dropbox.com/1/files/auto' + path)
-  .header('Authorization', 'Bearer ' + self.USERTOKEN)
-  .header('Range', 'bytes=' + offset + '-' + ( offset + size - 1 ))
-  .encoding(null)
-  .end(function (httpResponse) {
-    var errorOutput = null;
-    var response = {
-      data: null
-    };
-    if(httpResponse.serverError){
-      errorOutput = {
-        code: httpResponse.code,
-        status: httpResponse.status,
-        statusType: httpResponse.statusType
-      };
-    }else{
-      response.data = httpResponse.raw_body;
-      response.length = httpResponse.raw_body.length;
-    }
-    cb(errorOutput, response);
-  });
+  var xmlhttp = new XMLHttpRequest();
+  xmlhttp.open('get', 'https://api-content.dropbox.com/1/files/auto' + path, true);
+  xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+  xmlhttp.setRequestHeader('Range', 'bytes=' + offset + '-' + ( offset + size - 1 ));
+  xmlhttp.responseType = 'buffer';
+  xmlhttp.onload = function () {
+    var res = xmlhttp.response;
+    var length = res.length;
+    cb(null, {
+      data: res,
+      length: length
+    });
+  };
+
+  xmlhttp.send();
 };
 
 Dropbox._tokenRequest = function (link, auth, params, cb){
