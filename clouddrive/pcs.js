@@ -28,9 +28,13 @@ pcs._trimRootPath = function (fileMeta){
 	if(fileMeta.list){
 		for(var i in fileMeta.list){
 			var path = fileMeta.list[i].path;
+			var mtime = fileMeta.list[i].mtime;
+			var ctime = fileMeta.list[i].ctime;
 			if( 0 === path.indexOf(UD_ROOTPATH) ){
 				fileMeta.list[i].path = path.replace(UD_ROOTPATH, "");
 			}
+			fileMeta.list[i].mtime = mtime * 1000;
+			fileMeta.list[i].ctime = ctime * 1000;
 		}
 	}
 	return fileMeta;

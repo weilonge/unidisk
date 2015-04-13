@@ -60,6 +60,10 @@ Dropbox._convertItem = function (data){
     isdir: data.is_dir ? 1 : 0,
     path: data.path,
     size: data.bytes,
+    // Date format:
+    // "%a, %d %b %Y %H:%M:%S %z"
+    //
+    // Example: "Sat, 21 Aug 2010 22:31:20 +0000"
     mtime: new Date(data.modified).getTime(),
     ctime: new Date(data.modified).getTime()
   };

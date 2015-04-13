@@ -43,16 +43,16 @@ Sample._getMeta = function (path) {
         isdir: 0,
         path: path,
         size: meta.length,
-        mtime: (Date.now() / 1000),
-        ctime: (Date.now() / 1000)
+        mtime: Date.now(),
+        ctime: Date.now()
       };
     } else if (this._isObject(meta)) {
       return {
         isdir: 1,
         path: path,
         size: 0,
-        mtime: (Date.now() / 1000),
-        ctime: (Date.now() / 1000)
+        mtime: Date.now(),
+        ctime: Date.now()
       };
     }
   } else {
