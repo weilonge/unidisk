@@ -4,7 +4,7 @@ DataCache.init = function (blockSize) {
   this._MAX_DATA_CACHE_ENTRY = 25;
   this._BLOCK_SIZE = blockSize;
 
-  this._dataStore = require('./diskDataStore');
+  this._dataStore = require('./DiskDataStore');
   this._dataStore.init();
 
   this._fileDataCache = {};

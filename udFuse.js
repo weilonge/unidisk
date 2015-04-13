@@ -126,8 +126,8 @@ function init(cb) {
 	console.log("File system started at " + options.mountPoint);
 	console.log("To stop it, type this in another shell: fusermount -u " + options.mountPoint);
 	udManager.init({
-		metaCacheModule: require('./helper/metaCache'),
-		dataCacheModule: require('./helper/dataCache'),
+		metaCacheModule: require('./helper/MetaCache'),
+		dataCacheModule: require('./helper/DataCache'),
 		webStorageModule: require('./clouddrive/' + options.module)
 	});
 	cb();
