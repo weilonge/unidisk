@@ -1,5 +1,3 @@
-var fs = require('fs');
-
 var MemoryDataStore = {};
 
 MemoryDataStore.init = function (){

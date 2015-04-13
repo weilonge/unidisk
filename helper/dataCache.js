@@ -1,7 +1,6 @@
 var DataCache = {};
 
 DataCache.init = function (blockSize) {
-  this._CACHE_PATH = '/tmp/ud/cache';
   this._MAX_DATA_CACHE_ENTRY = 25;
   this._BLOCK_SIZE = blockSize;
 
