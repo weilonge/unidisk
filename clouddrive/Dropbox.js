@@ -9,9 +9,6 @@ Dropbox.init = function (){
 };
 
 Dropbox._handleJson = function (xmlhttp, cb){
-  if(xmlhttp.readyState !== 4)
-    return ;
-
   var response = {
     data: null
   };
@@ -39,7 +36,7 @@ Dropbox.quota = function (cb){
   xmlhttp.open('get', 'https://api.dropbox.com/1/account/info', true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
   xmlhttp.setRequestHeader('Accept', 'application/json');
-  xmlhttp.onreadystatechange = function () {
+  xmlhttp.onload = function () {
     self._handleJson(xmlhttp, function (error, response){
       if (response.data) {
         var quotaInfo = response.data.quota_info;
@@ -79,7 +76,7 @@ Dropbox.getFileMeta = function (path, cb){
   xmlhttp.open('get', 'https://api.dropbox.com/1/metadata/auto' + path, true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
   xmlhttp.setRequestHeader('Accept', 'application/json');
-  xmlhttp.onreadystatechange = function () {
+  xmlhttp.onload = function () {
     self._handleJson(xmlhttp, function (error, response){
       if (response.data) {
         var data = response.data;
@@ -104,7 +101,7 @@ Dropbox.getFileList = function (path, cb){
   xmlhttp.open('get', 'https://api.dropbox.com/1/metadata/auto' + path, true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
   xmlhttp.setRequestHeader('Accept', 'application/json');
-  xmlhttp.onreadystatechange = function () {
+  xmlhttp.onload = function () {
     self._handleJson(xmlhttp, function (error, response){
       if (response.data) {
         var data = response.data;
