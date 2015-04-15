@@ -1,4 +1,5 @@
 var unirest = require('unirest');
+var Settings = require('../helper/Settings');
 
 var XFR_ESTIMATING_MIN_SPEED = 20 * 1024; // n bytes/sec
 var XFR_ESTIMATING_MIN_TIME = 20; // secs
@@ -14,14 +15,7 @@ var UD_ROOTPATH = "/apps/APP_ROOT"
 var pcs = {};
 
 pcs.init = function (){
-	var tokenFileName = process.env.HOME + '/.baidu_pcs_token';
-	try {
-		var fs = require('fs');
-		var stats = fs.statSync(tokenFileName);
-		this.USERTOKEN = stats.isFile() ? fs.readFileSync( tokenFileName ) : null;
-	} catch (e) {
-		this.USERTOKEN = null;
-	}
+  this.USERTOKEN = Settings.get('baidu_pcs_token');
 };
 
 pcs._trimRootPath = function (fileMeta){

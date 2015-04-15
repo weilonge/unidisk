@@ -1,17 +1,11 @@
 var readline = require('readline');
 var unirest = require('unirest');
+var Settings = require('../helper/Settings');
 
 var Dropbox = {};
 
 Dropbox.init = function (){
-  var tokenFileName = process.env.HOME + '/.dropbox_token';
-  try {
-    var fs = require('fs');
-    var stats = fs.statSync(tokenFileName);
-    this.USERTOKEN = stats.isFile() ? fs.readFileSync( tokenFileName ) : null;
-  } catch (e) {
-    this.USERTOKEN = null;
-  }
+  this.USERTOKEN = Settings.get('dropbox_token');
 };
 
 Dropbox._handleJson = function (httpResponse, cb){

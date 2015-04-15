@@ -1,5 +1,4 @@
 var fuse = require('fuse-bindings')
-var fs = require('fs');
 var options = {};  // See parseArgs()
 var udManager = require('./helper/udManager');
 require('./helper/ObjectExtend');
