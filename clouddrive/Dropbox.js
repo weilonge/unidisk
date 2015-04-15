@@ -1,4 +1,3 @@
-var readline = require('readline');
 var unirest = require('unirest');
 var Settings = require('../helper/Settings');
 
@@ -154,12 +153,23 @@ Dropbox._tokenRequest = function (link, auth, params, cb){
 };
 
 /*
-step 1:
-https://www.dropbox.com/1/oauth2/authorize?
+step 1: Dropbox.getAuthLink
+Visit the link: https://www.dropbox.com/1/oauth2/authorize?
 client_id=<API_KEY>&
 response_type=code
+*/
 
-step 2:
+Dropbox.getAuthLink = function (api_key, cb){
+  var link = 'https://www.dropbox.com/1/oauth2/authorize?' +
+    'client_id=' + api_key + '&' +
+    'response_type=code';
+  cb(null, {data: {
+    authLink: link
+  }});
+};
+
+/*
+step 2: Dropbox.getAccessToken
 curl https://api.dropbox.com/1/oauth2/token \
 -d code=<USER_CODE> \
 -d grant_type=authorization_code \
@@ -172,37 +182,15 @@ Response:
   "uid": "??????"
 }
 */
-
-Dropbox.getAccessToken = function (api_key, api_secret, cb){
-  var self = this;
-  var device_code = null;
-
-  var link = 'https://www.dropbox.com/1/oauth2/authorize?' +
-    'client_id=' + api_key + '&' +
-    'response_type=code';
-
-  var rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
-  rl.question("Please go to the link\n" + link + "\nand input the code for oauth:\n", function(answer) {
-    device_code = answer;
-    console.log('\nYour code: ' + device_code);
-    rl.close();
-
-    var linkToken = 'https://api.dropbox.com/1/oauth2/token';
-    self._tokenRequest(linkToken, {
-      'user': api_key,
-      'pass': api_secret
-    }, {
-      'code': device_code,
-      'grant_type': 'authorization_code'
-    }, function(error, response){
-      console.log(response);
-    });
-  });
-
+Dropbox.getAccessToken = function (api_key, api_secret, device_code, cb){
+  var linkToken = 'https://api.dropbox.com/1/oauth2/token';
+  this._tokenRequest(linkToken, {
+    'user': api_key,
+    'pass': api_secret
+  }, {
+    'code': device_code,
+    'grant_type': 'authorization_code'
+  }, cb);
 };
 
 module.exports = Dropbox;

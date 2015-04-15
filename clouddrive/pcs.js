@@ -239,9 +239,11 @@ pcs.getAccessToken = function (api_key, api_secret, cb){
 			console.log('waiting for verification...');
 			setTimeout(request2nd, interval * 1000);
 		} else if (response.data.access_token){
-			console.log(response.data.access_token);
+			cb(error, {
+				data: {access_token: response.data.access_token}
+			});
 		} else {
-			console.error('Unknown Error');
+			cb({error_msg: 'Unknown Error'}, {data: null});
 		}
 	}
 
