@@ -1,4 +1,3 @@
-var unirest = require('unirest');
 var Settings = require('../helper/Settings');
 var XMLHttpRequest = require('xhr2');
 
@@ -144,17 +143,6 @@ Dropbox.getFileDownload = function (path, offset, size, cb){
   xmlhttp.send();
 };
 
-Dropbox._tokenRequest = function (link, auth, params, cb){
-  var self = this;
-  unirest.post(link)
-  .auth(auth)
-  .header('Accept', 'application/json')
-  .send(params)
-  .end(function (httpResponse) {
-    self._handleJson(httpResponse, cb);
-  });
-};
-
 /*
 step 1: Dropbox.getAuthLink
 Visit the link: https://www.dropbox.com/1/oauth2/authorize?
@@ -186,14 +174,36 @@ Response:
 }
 */
 Dropbox.getAccessToken = function (api_key, api_secret, device_code, cb){
-  var linkToken = 'https://api.dropbox.com/1/oauth2/token';
-  this._tokenRequest(linkToken, {
-    'user': api_key,
-    'pass': api_secret
-  }, {
+  var self = this;
+  var linkToken = 'https://' + api_key + ':' + api_secret + '@' +
+    'api.dropbox.com/1/oauth2/token';
+  var params = {
     'code': device_code,
     'grant_type': 'authorization_code'
-  }, cb);
+  };
+  var strParams = 'code=' + encodeURIComponent(params.code) +
+    '&grant_type=' + encodeURIComponent(params.grant_type);
+  var xmlhttp = new XMLHttpRequest();
+  xmlhttp.open('post', linkToken, true);
+  xmlhttp.setRequestHeader('Accept', 'application/json');
+  xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  xmlhttp.setRequestHeader('Content-length', strParams.length);
+  xmlhttp.onload = function (){
+    self._handleJson(xmlhttp, function (error, response){
+      if (response.data) {
+        var data = response.data;
+        var result = {
+          data:{
+            access_token: data.access_token
+          }
+        };
+        cb(error, result);
+      } else {
+        cb(error, response);
+      }
+    });
+  };
+  xmlhttp.send(strParams);
 };
 
 module.exports = Dropbox;
