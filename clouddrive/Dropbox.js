@@ -136,6 +136,7 @@ Dropbox.getFileDownload = function (path, offset, size, cb){
       };
     }else{
       response.data = httpResponse.raw_body;
+      response.length = httpResponse.raw_body.length;
     }
     cb(errorOutput, response);
   });

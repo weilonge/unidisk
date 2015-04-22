@@ -108,6 +108,7 @@ pcs._download = function (options, cb){
 			};
 		}else{
 			response.data = httpResponse.raw_body;
+			response.length = httpResponse.raw_body.length;
 		}
 		cb(errorOutput, response);
 	});
