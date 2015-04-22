@@ -2,6 +2,15 @@ var MemoryDataStore = {};
 
 MemoryDataStore.init = function (){
   this._data = {};
+  this._IS_WEB = typeof document !== 'undefined' &&
+    typeof window !== 'undefined';
+  if (this._IS_WEB) {
+    this.BufferType = Uint8Array;
+    this.readEntry = this._webReadEntry;
+  } else {
+    this.BufferType = Buffer;
+    this.readEntry = this._nodeReadEntry;
+  }
 };
 
 MemoryDataStore.deleteEntry = function (key){
@@ -9,14 +18,23 @@ MemoryDataStore.deleteEntry = function (key){
   this._data[key] = null;
 };
 
-MemoryDataStore.readEntry =
+MemoryDataStore._webReadEntry =
+  function (key, targetBuffer, targetOffset, sourceOffset, length){
+  var uint8a = this._data[key];
+  var sliced = uint8a.slice(sourceOffset, sourceOffset + length);
+  for(var i = targetOffset, copied = 0; i < length; i++, copied++){
+    targetBuffer[i] = sliced[copied];
+  }
+};
+
+MemoryDataStore._nodeReadEntry =
   function (key, targetBuffer, targetOffset, sourceOffset, length){
   this._data[key].copy(targetBuffer,
     targetOffset, sourceOffset, sourceOffset + length);
 };
 
 MemoryDataStore.writeEntry = function (key, data, cb){
-  this._data[key] = new Buffer(data);
+  this._data[key] = new this.BufferType(data);
   cb(null);
 };
 

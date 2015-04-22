@@ -2,10 +2,13 @@ var DataCache = {};
 var Settings = require('./Settings');
 
 DataCache.init = function (blockSize) {
+  this._IS_WEB = typeof document !== 'undefined' &&
+    typeof window !== 'undefined';
   this._MAX_DATA_CACHE_ENTRY = Settings.get('max_data_cache_entry');
   this._BLOCK_SIZE = blockSize;
 
-  this._dataStore = require('./DiskDataStore');
+  this._dataStore = this._IS_WEB ?
+    require('./MemoryDataStore') : require('./DiskDataStore');
   this._dataStore.init();
 
   this._fileDataCache = {};
@@ -111,7 +114,7 @@ DataCache.readCache = function (path, buffer, offset, size, requestList, cb){
 DataCache.generateKey = function (task){
   function hashCode(str) {
     var hash = 0, i, chr, len;
-    if (str.length == 0) return hash;
+    if (str.length === 0) return hash;
     for (i = 0, len = str.length; i < len; i++) {
       chr   = str.charCodeAt(i);
       hash  = ((hash << 5) - hash) + chr;
