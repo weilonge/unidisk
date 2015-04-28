@@ -10,6 +10,7 @@
   "dependencies": {
     "async": "^0.9.0",
     "fuse-bindings": "^2.1.2",
-    "unirest": "^0.3.7"
+    "unirest": "^0.3.7",
+    "xhr2": "^0.1.2"
   }
 }
