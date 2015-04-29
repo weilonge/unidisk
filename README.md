@@ -12,5 +12,6 @@ UD - link all your web storages together
 
 
 ### Run
-* ./mount.sh Sample
+* Get access token first, then select storage provider which can be Sample/Dropbox/pcs.
+* ./mount.sh [storage provider]
 
