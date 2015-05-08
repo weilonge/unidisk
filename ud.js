@@ -9,7 +9,7 @@ var path = require('path');
 function showHelp(exeName){
 	console.log("\
 -- Universal Drive --\n\
-Usage: " + exeName + " MODULE [P1] [P2]\n\
+Usage: " + exeName + " MODULE COMMAND [P1] [P2]\n\
      MODULE: command of udManager or other cloud storage APIs.\n\
 \n\
 Example: " + exeName + " quota\n\
@@ -33,10 +33,14 @@ if( '--help' === process.argv[2] || '-h' === process.argv[2] ){
 	return ;
 }
 
-var ret = udUtility.invokeCommand(process.argv.slice(2), [
-	require('./clouddrive/pcs'),
-	require('./helper/udManager')
-], 1, cccb);
+var moduleSet = {
+	pcs: require('./clouddrive/pcs'),
+	Dropbox: require('./clouddrive/Dropbox'),
+	udManager: require('./helper/udManager')
+};
+
+var ret = udUtility.invokeCommand(process.argv.slice(3),
+	moduleSet[process.argv[2]], 1, cccb);
 
 if( 0 !== ret ){
 	showHelp(path.basename(process.argv[1]));

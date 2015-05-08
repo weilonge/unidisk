@@ -9,12 +9,9 @@ exports.invokeCommand = function (argv, commandSet, ignoreArgNum, cb){
 	}
 	var cmd = argv[0];
 	var funcP = null, funcS = null;
-	for(var i in commandSet){
-		if( commandSet[i][cmd] ){
-			funcP = commandSet[i][cmd];
-			funcS = commandSet[i];
-		}
-	}
+	funcP = commandSet[cmd];
+	funcS = commandSet;
+
 	if( null === funcP || null === funcS ){
 		return "(2) Cannot find this command - " + cmd;
 	}
