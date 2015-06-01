@@ -107,8 +107,14 @@ pcs._download = function (options, cb){
 				statusType: httpResponse.statusType
 			};
 		}else{
-			response.data = httpResponse.raw_body;
-			response.length = httpResponse.raw_body.length;
+			try {
+				// XXX: this is a workaround for unstable issue.
+				response.data = httpResponse.raw_body;
+				response.length = httpResponse.raw_body.length;
+			} catch (e) {
+				console.log(e)
+				errorOutput = httpResponse.body;
+			}
 		}
 		cb(errorOutput, response);
 	});
