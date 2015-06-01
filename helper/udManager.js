@@ -1,4 +1,5 @@
 var async = require('async');
+var foco = require('foco');
 
 var UD_BLOCK_SIZE = 1*1024*1024;
 var UD_QUEUE_SIZE = 3;
@@ -16,7 +17,7 @@ udManager._isIllegalFileName = function (path) {
 	return false;
 }
 
-udManager.queueHandler = function (task, callback) {
+udManager.queueHandler = function (id, task, callback) {
 	console.log('  [B] ' + task.path + "|" + task.offset + '| downloading...');
 	var self = this;
 	task.status = "DOWNLOADING";
@@ -38,7 +39,7 @@ udManager.init = function(options){
 	this.webStorage.init();
 	this.metaCache.init();
 	this.dataCache.init(UD_BLOCK_SIZE);
-	this.FileDownloadQueue = async.queue(
+	this.FileDownloadQueue = foco.priorityQueue(
 		this.queueHandler.bind(this), UD_QUEUE_SIZE);
 }
 
@@ -182,19 +183,16 @@ udManager._requestPushAndDownload = function (path, downloadRequest, cb){
 
 		if (data) {
 			console.log('  [C1] ' + data.path + " is in cache: " + data.status + "| " + task.offset);
+			udManager.FileDownloadQueue.priorityChange(taskMd5sum, 0);
 			callback();
 		} else if ( task.priority === "PREFETCH" ) {
 			self.dataCache.update(taskMd5sum, task);
-			udManager.FileDownloadQueue.push(task, function (err){
-				console.log('  [C3] ' + 'pushed task is done.');
-			});
+			udManager.FileDownloadQueue.push(taskMd5sum, 1, task);
 			callback();
 		}else{
 			self.dataCache.update(taskMd5sum, task);
-			udManager.FileDownloadQueue.push(task, function (err){
-				console.log('  [C2] ' + 'pushed task is done.');
-				callback();
-			});
+			udManager.FileDownloadQueue.push(taskMd5sum, 0, task);
+			callback();
 		}
 	}, function(err){
 		// Verify the download request is all finished or not.
