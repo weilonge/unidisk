@@ -1,9 +1,10 @@
 var fs = require('fs');
+var Settings = require('./Settings');
 
 var DiskDataStore = {};
 
 DiskDataStore.init = function (){
-  this._CACHE_PATH = '/tmp/ud/cache';
+  this._CACHE_PATH = Settings.get('cache_path');
 };
 
 DiskDataStore.deleteEntry = function (key){

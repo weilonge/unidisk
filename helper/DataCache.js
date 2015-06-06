@@ -1,7 +1,8 @@
 var DataCache = {};
+var Settings = require('./Settings');
 
 DataCache.init = function (blockSize) {
-  this._MAX_DATA_CACHE_ENTRY = 25;
+  this._MAX_DATA_CACHE_ENTRY = Settings.get('max_data_cache_entry');
   this._BLOCK_SIZE = blockSize;
 
   this._dataStore = require('./DiskDataStore');
