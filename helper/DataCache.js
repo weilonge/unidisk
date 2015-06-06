@@ -108,10 +108,8 @@ DataCache.readCache = function (path, buffer, offset, size, requestList, cb){
 };
 
 DataCache.generateKey = function (task){
-  var crypto = require('crypto');
-  var name = task.path + '' + task.offset + '';
-  var hash = crypto.createHash('md5').update(name).digest('hex');
-  return hash;
+  var obscured = task.path.replace(/\//g, ':') + '@' + task.offset;
+  return obscured + obscured;
 };
 
 module.exports = DataCache;
