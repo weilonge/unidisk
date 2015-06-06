@@ -1,8 +1,9 @@
 var foco = require('foco');
+var Settings = require('./Settings');
 
-var UD_BLOCK_SIZE = 1*1024*1024;
-var UD_QUEUE_SIZE = 3;
-var UD_PREFETCH_SIZE = 10 * UD_BLOCK_SIZE;
+var UD_BLOCK_SIZE = Settings.get('block_size');
+var UD_QUEUE_CONCURRENCY = Settings.get('queue_concurrency');
+var UD_PREFETCH_SIZE = Settings.get('prefetch_blocks') * UD_BLOCK_SIZE;
 
 var udManager = {};
 
@@ -39,7 +40,7 @@ udManager.init = function(options){
 	this.metaCache.init();
 	this.dataCache.init(UD_BLOCK_SIZE);
 	this.FileDownloadQueue = foco.priorityQueue(
-		this.queueHandler.bind(this), UD_QUEUE_SIZE);
+		this.queueHandler.bind(this), UD_QUEUE_CONCURRENCY);
 }
 
 udManager.showStat = function (cb) {

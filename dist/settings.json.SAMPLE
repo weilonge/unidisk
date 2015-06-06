@@ -1,0 +1,9 @@
+{
+  "block_size": 1048576,
+  "queue_concurrency": 3,
+  "prefetch_blocks": 10,
+  "max_data_cache_entry": 25,
+  "cache_path": "/tmp/ud/cache",
+  "baidu_pcs_token": "TOKEN_EXAMPLE",
+  "dropbox_token": "TOKEN_EXAMPLE"
+}
