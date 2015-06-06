@@ -108,8 +108,19 @@ DataCache.readCache = function (path, buffer, offset, size, requestList, cb){
 };
 
 DataCache.generateKey = function (task){
-  var obscured = task.path.replace(/\//g, ':') + '@' + task.offset;
-  return obscured + obscured;
+  function hashCode(str) {
+    var hash = 0, i, chr, len;
+    if (str.length == 0) return hash;
+    for (i = 0, len = str.length; i < len; i++) {
+      chr   = str.charCodeAt(i);
+      hash  = ((hash << 5) - hash) + chr;
+      hash |= 0; // Convert to 32bit integer
+    }
+    return hash;
+  }
+
+  var obscured = task.path.replace(/\//g, ':');
+  return hashCode(task.path) + '@' + obscured + '@' + task.offset;
 };
 
 module.exports = DataCache;
