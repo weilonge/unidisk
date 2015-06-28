@@ -1,18 +1,8 @@
 var Sample = {};
 
 Sample.init = function (){
-  this._TEST_DATA = {
-    'hello.txt': 'Hello world!\n',
-    'dir1': {
-      'welcome.txt': 'Welcome to UniDisk\n',
-      'dir2': {
-        'dummy.txt': 'Dummy\n',
-        'dummy2.txt': 'Dummy 2\n'
-      },
-      'readme': 'Sample cloud drive is for people to customize your own module.\n'
-    },
-    'goodbye.txt': 'Goodbye\n'
-  };
+  var jsonFileName = process.env.HOME + '/.unidisk/' + 'samplefs.json';
+  this._TEST_DATA = require(jsonFileName);
 };
 
 Sample._isObject = function (obj) {
