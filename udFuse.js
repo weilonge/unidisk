@@ -125,6 +125,7 @@ function init(cb) {
 	console.log("File system started at " + options.mountPoint);
 	console.log("To stop it, type this in another shell: fusermount -u " + options.mountPoint);
 	udManager.init({
+		moduleOpt: options.moduleOpt,
 		metaCacheModule: require('./helper/MetaCache'),
 		dataCacheModule: require('./helper/DataCache'),
 		webStorageModule: require('./clouddrive/' + options.module)
@@ -192,8 +193,8 @@ function usage() {
 	console.log("Usage: node udFuse.js [options] mountPoint\n")
 	console.log("Options:");
 	console.log("-d                 : make FUSE print debug statements.");
-	console.log("-a                 : add allow_other option to mount (might need user_allow_other in system fuse config file).");
-	console.log("-m                 : specify web storage module. default: jsonfs");
+	console.log("-m                 : specify web storage module.");
+	console.log("-o                 : options for the module.");
 	console.log();
 	console.log("Example:");
 	console.log("node udFuse.fs -d /tmp/mnt");
@@ -206,19 +207,21 @@ function parseArgs() {
 	if (args.length < 3) {
 		return false;
 	}
-	options.mountPoint = args[args.length - 1];
-	options.module = 'jsonfs';
-	remaining = args.length - 3;
-	for( i = 2; remaining > 1; remaining--) {
+	options.mountPoint = args.pop();
+	options.moduleOpt = {};
+	for( i = 2; i < args.length; i++) {
 		if (args[i] === '-d') {
 			options.debugFuse = true;
-			++i;
-		} else if (args[i] === '-a') {
-			options.allowOthers = true;
-			++i;
 		} else if (args[i] === '-m') {
-			options.module = args[i+1];
-			i += 2;
+			options.module = args[++i];
+		} else if (args[i] === '-o') {
+			var mOpts = args[++i].split(',');
+			mOpts.forEach(function (item, index){
+				var pair = item.split('=');
+				var key = pair[0];
+				var val = pair[1];
+				options.moduleOpt[key] = val;
+			});
 		} else {
 			return false;
 		}
@@ -232,11 +235,6 @@ function parseArgs() {
 		if (options.debugFuse)
 			console.log("FUSE debugging enabled");
 		try {
-			var opts = [];
-			if (options.allowOthers) {
-				opts.push('-o');
-				opts.push('allow_other');
-			}
 			fuse.mount(options.mountPoint, handlers);
 		} catch (e) {
 			console.log("Exception when starting file system: " + e);

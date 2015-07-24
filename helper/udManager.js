@@ -36,7 +36,7 @@ udManager.init = function(options){
 	this.metaCache = options.metaCacheModule;
 	this.dataCache = options.dataCacheModule;
 
-	this.webStorage.init();
+	this.webStorage.init(options.moduleOpt);
 	this.metaCache.init();
 	this.dataCache.init(UD_BLOCK_SIZE);
 	this.FileDownloadQueue = foco.priorityQueue(
