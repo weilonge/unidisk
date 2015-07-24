@@ -1,7 +1,7 @@
 var Sample = {};
 
-Sample.init = function (){
-  var jsonFileName = process.env.HOME + '/.unidisk/' + 'samplefs.json';
+Sample.init = function (options){
+  var jsonFileName = options.JSONPath;
   this._TEST_DATA = require(jsonFileName);
 };
 
