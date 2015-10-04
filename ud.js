@@ -40,7 +40,7 @@ var moduleSet = {
 };
 
 var ret = udUtility.invokeCommand(process.argv.slice(3),
-	moduleSet[process.argv[2]], 1, cccb);
+	new moduleSet[process.argv[2]](), 1, cccb);
 
 if( 0 !== ret ){
 	showHelp(path.basename(process.argv[1]));

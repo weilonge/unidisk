@@ -1,15 +1,15 @@
-var Sample = {};
+var Sample = function (){};
 
-Sample.init = function (options){
+Sample.prototype.init = function (options){
   var jsonFileName = options.JSONPath;
   this._TEST_DATA = require(jsonFileName);
 };
 
-Sample._isObject = function (obj) {
+Sample.prototype._isObject = function (obj) {
   return typeof obj === 'object';
 };
 
-Sample._findMeta = function (path) {
+Sample.prototype._findMeta = function (path) {
   if (path === '/') {
     return this._TEST_DATA;
   }
@@ -25,7 +25,7 @@ Sample._findMeta = function (path) {
   return currentNode;
 };
 
-Sample._getMeta = function (path) {
+Sample.prototype._getMeta = function (path) {
   var meta = this._findMeta(path);
   if (meta) {
     if (typeof meta === 'string') {
@@ -50,7 +50,7 @@ Sample._getMeta = function (path) {
   }
 };
 
-Sample.quota = function (cb){
+Sample.prototype.quota = function (cb){
   cb(null, {
     data:{
       quota: 2313913630720,
@@ -60,7 +60,7 @@ Sample.quota = function (cb){
   });
 }
 
-Sample.getFileMeta = function (path, cb){
+Sample.prototype.getFileMeta = function (path, cb){
   var meta = this._getMeta(path);
   var result = meta ? {list: [meta]} : null;
   cb(null, {
@@ -68,7 +68,7 @@ Sample.getFileMeta = function (path, cb){
   });
 }
 
-Sample.getFileDownload = function (path, offset, size, cb){
+Sample.prototype.getFileDownload = function (path, offset, size, cb){
   var meta = this._findMeta(path);
   if (meta && typeof meta === 'string') {
     var result = meta.substr(offset, size);
@@ -81,7 +81,7 @@ Sample.getFileDownload = function (path, offset, size, cb){
   }
 }
 
-Sample.getFileList = function (path, cb){
+Sample.prototype.getFileList = function (path, cb){
   var meta = this._getMeta(path);
   var resultList = [];
   if (meta && meta.isdir === 1) {

@@ -12,13 +12,13 @@ var PCS_HOSTNAME_C = "c.pcs.baidu.com";
 var PCSURI = "/rest/2.0/pcs";
 var UD_ROOTPATH = "/apps/APP_ROOT"
 
-var pcs = {};
+var pcs = function (){};
 
-pcs.init = function (){
+pcs.prototype.init = function (){
   this.USERTOKEN = Settings.get('baidu_pcs_token');
 };
 
-pcs._trimRootPath = function (fileMeta){
+pcs.prototype._trimRootPath = function (fileMeta){
 	if(fileMeta.list){
 		for(var i in fileMeta.list){
 			var path = fileMeta.list[i].path;
@@ -34,7 +34,7 @@ pcs._trimRootPath = function (fileMeta){
 	return fileMeta;
 }
 
-pcs._generatePath = function (options){
+pcs.prototype._generatePath = function (options){
 	var path = "";
 	path += PCSURI + "/" + encodeURIComponent(options.cmd);
 	path += "?access_token=" + encodeURIComponent(this.USERTOKEN);
@@ -46,7 +46,8 @@ pcs._generatePath = function (options){
 	return path;
 }
 
-pcs._execute = function (options, cb){
+pcs.prototype._execute = function (options, cb){
+	var that = this;
 	var link = "https://" + PCS_HOSTNAME + this._generatePath(options);
 	unirest.get(link)
 	.proxy(XFR_PROXY)
@@ -73,7 +74,7 @@ pcs._execute = function (options, cb){
 					errorOutput = responseJson;
 					console.log(errorOutput);
 				} else {
-					response.data = pcs._trimRootPath(responseJson);
+					response.data = that._trimRootPath(responseJson);
 				}
 			} catch (e) {
 				errorOutput = httpResponse.body;
@@ -83,7 +84,7 @@ pcs._execute = function (options, cb){
 	});
 }
 
-pcs._download = function (options, cb){
+pcs.prototype._download = function (options, cb){
 	var link = "https://" + PCS_HOSTNAME_D + this._generatePath(options);
 	var estimationTime = (options.size / XFR_ESTIMATING_MIN_SPEED);
 	unirest.get(link)
@@ -120,7 +121,7 @@ pcs._download = function (options, cb){
 	});
 }
 
-pcs.quota = function (cb){
+pcs.prototype.quota = function (cb){
 	this._execute({
 		cmd: "quota",
 		method: "info",
@@ -128,7 +129,7 @@ pcs.quota = function (cb){
 	}, cb);
 }
 
-pcs.getFileMeta = function (path, cb){
+pcs.prototype.getFileMeta = function (path, cb){
 	this._execute({
 		cmd: "file",
 		method: "meta",
@@ -137,7 +138,7 @@ pcs.getFileMeta = function (path, cb){
 	}, cb);
 }
 
-pcs.getFileMetaBatch = function (param, cb){
+pcs.prototype.getFileMetaBatch = function (param, cb){
 	for(var i = 0; i < param.list.length; i++){
 		param.list[i].path = UD_ROOTPATH + param.list[i].path;
 	}
@@ -156,7 +157,7 @@ pcs.getFileMetaBatch = function (param, cb){
 	});
 }
 
-pcs.getFileDownload = function (path, offset, size, cb){
+pcs.prototype.getFileDownload = function (path, offset, size, cb){
 	this._download({
 		cmd: "file",
 		method: "download",
@@ -167,7 +168,7 @@ pcs.getFileDownload = function (path, offset, size, cb){
 	}, cb);
 }
 
-pcs.getFileList = function (path, cb){
+pcs.prototype.getFileList = function (path, cb){
 	this._execute({
 		cmd: "file",
 		method: "list",
@@ -176,7 +177,7 @@ pcs.getFileList = function (path, cb){
 	}, cb);
 }
 
-pcs.getFileListRecycle = function (cb){
+pcs.prototype.getFileListRecycle = function (cb){
 	this._execute({
 		cmd: "file",
 		method: "listrecycle"
@@ -184,7 +185,7 @@ pcs.getFileListRecycle = function (cb){
 }
 
 
-pcs._tokenRequest = function (link, cb){
+pcs.prototype._tokenRequest = function (link, cb){
 	unirest.get(link)
 	.header('Accept', 'application/json')
 	.proxy(XFR_PROXY)
@@ -208,7 +209,7 @@ pcs._tokenRequest = function (link, cb){
 	});
 };
 
-pcs.getAccessToken = function (api_key, api_secret, cb){
+pcs.prototype.getAccessToken = function (api_key, api_secret, cb){
 	var self = this;
 	var device_code = null;
 	var interval = 10;

@@ -1,13 +1,13 @@
 var Settings = require('../helper/Settings');
 var XMLHttpRequest = require('xhr2');
 
-var Dropbox = {};
+var Dropbox = function (){};
 
-Dropbox.init = function (){
+Dropbox.prototype.init = function (){
   this.USERTOKEN = Settings.get('dropbox_token');
 };
 
-Dropbox._handleJson = function (xmlhttp, cb){
+Dropbox.prototype._handleJson = function (xmlhttp, cb){
   var response = {
     data: null
   };
@@ -29,7 +29,7 @@ Dropbox._handleJson = function (xmlhttp, cb){
   }
 };
 
-Dropbox.quota = function (cb){
+Dropbox.prototype.quota = function (cb){
   var self = this;
   var xmlhttp = new XMLHttpRequest();
   xmlhttp.open('get', 'https://api.dropbox.com/1/account/info', true);
@@ -55,7 +55,7 @@ Dropbox.quota = function (cb){
   xmlhttp.send();
 };
 
-Dropbox._convertItem = function (data){
+Dropbox.prototype._convertItem = function (data){
   return {
     isdir: data.is_dir ? 1 : 0,
     path: data.path,
@@ -69,7 +69,7 @@ Dropbox._convertItem = function (data){
   };
 };
 
-Dropbox.getFileMeta = function (path, cb){
+Dropbox.prototype.getFileMeta = function (path, cb){
   var self = this;
   var xmlhttp = new XMLHttpRequest();
   xmlhttp.open('get', 'https://api.dropbox.com/1/metadata/auto' + path, true);
@@ -94,7 +94,7 @@ Dropbox.getFileMeta = function (path, cb){
   xmlhttp.send('list=false');
 };
 
-Dropbox.getFileList = function (path, cb){
+Dropbox.prototype.getFileList = function (path, cb){
   var self = this;
   var xmlhttp = new XMLHttpRequest();
   xmlhttp.open('get', 'https://api.dropbox.com/1/metadata/auto' + path, true);
@@ -124,7 +124,7 @@ Dropbox.getFileList = function (path, cb){
   xmlhttp.send('list=true');
 };
 
-Dropbox.getFileDownload = function (path, offset, size, cb){
+Dropbox.prototype.getFileDownload = function (path, offset, size, cb){
   var self = this;
   var xmlhttp = new XMLHttpRequest();
   xmlhttp.open('get', 'https://api-content.dropbox.com/1/files/auto' + path, true);
@@ -150,7 +150,7 @@ client_id=<API_KEY>&
 response_type=code
 */
 
-Dropbox.getAuthLink = function (api_key, cb){
+Dropbox.prototype.getAuthLink = function (api_key, cb){
   var link = 'https://www.dropbox.com/1/oauth2/authorize?' +
     'client_id=' + api_key + '&' +
     'response_type=code';
@@ -173,7 +173,7 @@ Response:
   "uid": "??????"
 }
 */
-Dropbox.getAccessToken = function (api_key, api_secret, device_code, cb){
+Dropbox.prototype.getAccessToken = function (api_key, api_secret, device_code, cb){
   var self = this;
   var linkToken = 'https://' + api_key + ':' + api_secret + '@' +
     'api.dropbox.com/1/oauth2/token';

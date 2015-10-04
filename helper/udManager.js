@@ -32,7 +32,7 @@ udManager.queueHandler = function (id, task, callback) {
 };
 
 udManager.init = function(options){
-	this.webStorage = options.webStorageModule;
+	this.webStorage = new options.webStorageModule();
 	this.metaCache = options.metaCacheModule;
 	this.dataCache = options.dataCacheModule;
 
