@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 var fuse = require('fuse-bindings')
 var options = {};  // See parseArgs()
 var udManager = require('./helper/udManager');
@@ -7,7 +8,7 @@ const EPERM = -1;
 const ENOENT = -2;
 
 function getattr(path, cb) {
-	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
+	//console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
 	udManager.getFileMeta(path, function (error, response){
 		var stat = {};
 		var err = 0; // assume success

@@ -21,7 +21,7 @@ This project can help you to use Cloud Storage in a new way and provide the foll
 
 ### Prepare settings.json
 * Copy settings.json and customize 'cache_path'.
-~~~sh
+~~~
 $ mkdir ~/.unidisk && cp dist/settings.json.SAMPLE ~/.unidisk/settings.json
 ~~~
 
@@ -31,16 +31,16 @@ unidisk supports three kinds of storage to access: SampleJSON FS, Dropbox, and B
 ### Sample JSON FS
 * Please prepare a valid JSON file or get it from 'dist/samplefs.json'
 * Use the command to mount JSON FS with your sample JSON file:
-~~~sh
-$ node udFuse.js -m Sample -o JSONPath=[path to a JSON file] [mount point]
+~~~
+$ ./udFuse.js -m Sample -o JSONPath=[path to a JSON file] [mount point]
 ~~~
 * The storage is ready at the mount point you gave.
 
 ### Dropbox
 * Please apply a Dropbox development account , and keep your API_KEY and API_SECRET
 * Use this command to get the authrization link and browser the link then login your account
-~~~sh
-$ node ud.js Dropbox getAuthLink [API_KEY]
+~~~
+$ ./ud.js Dropbox getAuthLink [API_KEY]
 == Result ====================
 { authLink: 'https://www.dropbox.com/1/oauth2/authorize?client_id=API_KEY&response_type=code' }
 ==============================
@@ -50,8 +50,8 @@ $ node ud.js Dropbox getAuthLink [API_KEY]
 QrlXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ~~~
 * Use this command to get the acess_token:
-~~~sh
-$ node ud.js Dropbox getAccessToken [API_KEY] [API_SECRET] [DEVICE_CODE]
+~~~
+$ ./ud.js Dropbox getAccessToken [API_KEY] [API_SECRET] [DEVICE_CODE]
 == Result ====================
 { access_token: 'QrlXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXYYYYYYYYYYYYYYYYYYYYYYYYYYYY' }
 ==============================
@@ -61,16 +61,16 @@ $ node ud.js Dropbox getAccessToken [API_KEY] [API_SECRET] [DEVICE_CODE]
 dropbox_token: "QrlXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXYYYYYYYYYYYYYYYYYYYYYYYYYYYY"
 ~~~
 * Use this command to mount Dropbox:
-~~~sh
-$ node udFuse.js -m Dropbox [mount point]
+~~~
+$ ./udFuse.js -m Dropbox [mount point]
 ~~~
 * The storage is ready at the mount point you gave.
 
 ### BaiduYun
 * Please apply a BaiduYun development account , and keep your API_KEY and API_SECRET
 * Use this command to get the authrization link and browser the link then login your account and input DEVICE_CODE:
-~~~sh
-$ node ud.js pcs getAccessToken [API_KEY] [API_SECRET]
+~~~
+$ ./ud.js pcs getAccessToken [API_KEY] [API_SECRET]
 https://openapi.baidu.com/device
 DEVICE_CODE
 waiting for verification...
@@ -84,8 +84,8 @@ waiting for verification...
 baidu_pcs_token: "23.XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ~~~
 * Use this command to mount Dropbox:
-~~~sh
-$ node udFuse.js -m pcs [mount point]
+~~~
+$ ./udFuse.js -m pcs [mount point]
 ~~~
 * The storage is ready at the mount point you gave.
 
