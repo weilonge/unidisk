@@ -1,7 +1,7 @@
 var udManager = require('../helper/udManager');
 
-var udManagerHelper = {
-  init: function (storageName, options) {
+var UnidiskHelper = {
+  create: function (storageName, options) {
     var storageMod;
     switch (storageName) {
     case 'Sample':
@@ -14,14 +14,15 @@ var udManagerHelper = {
       storageMod = require('../clouddrive/pcs');
       break;
     }
-    udManager.init({
+    var udm = new udManager();
+    udm.init({
       moduleOpt: options,
       metaCacheModule: require('../helper/MetaCache'),
       dataCacheModule: require('../helper/DataCache'),
       webStorageModule: storageMod
     });
+    return udm;
   }
 };
 
-window.udManagerHelper = udManagerHelper;
-window.udManager = udManager;
+window.UnidiskHelper = UnidiskHelper;
