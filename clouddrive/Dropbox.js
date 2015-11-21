@@ -1,10 +1,17 @@
 var Settings = require('../helper/Settings');
-var XMLHttpRequest = require('xhr2');
 
 var Dropbox = function (){};
 
-Dropbox.prototype.init = function (){
-  this.USERTOKEN = Settings.get('dropbox_token');
+Dropbox.prototype.init = function (options){
+  this._IS_WEB = typeof document !== 'undefined' &&
+    typeof window !== 'undefined';
+  this.XHR = this._IS_WEB ? window.XMLHttpRequest : require('xhr2');
+
+  if (options.token) {
+    this.USERTOKEN = options.token;
+  } else {
+    this.USERTOKEN = Settings.get('dropbox_token');
+  }
 };
 
 Dropbox.prototype._handleJson = function (xmlhttp, cb){
@@ -31,7 +38,7 @@ Dropbox.prototype._handleJson = function (xmlhttp, cb){
 
 Dropbox.prototype.quota = function (cb){
   var self = this;
-  var xmlhttp = new XMLHttpRequest();
+  var xmlhttp = new this.XHR();
   xmlhttp.open('get', 'https://api.dropbox.com/1/account/info', true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
   xmlhttp.setRequestHeader('Accept', 'application/json');
@@ -71,7 +78,7 @@ Dropbox.prototype._convertItem = function (data){
 
 Dropbox.prototype.getFileMeta = function (path, cb){
   var self = this;
-  var xmlhttp = new XMLHttpRequest();
+  var xmlhttp = new this.XHR();
   xmlhttp.open('get', 'https://api.dropbox.com/1/metadata/auto' + path, true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
   xmlhttp.setRequestHeader('Accept', 'application/json');
@@ -96,7 +103,7 @@ Dropbox.prototype.getFileMeta = function (path, cb){
 
 Dropbox.prototype.getFileList = function (path, cb){
   var self = this;
-  var xmlhttp = new XMLHttpRequest();
+  var xmlhttp = new this.XHR();
   xmlhttp.open('get', 'https://api.dropbox.com/1/metadata/auto' + path, true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
   xmlhttp.setRequestHeader('Accept', 'application/json');
@@ -126,14 +133,14 @@ Dropbox.prototype.getFileList = function (path, cb){
 
 Dropbox.prototype.getFileDownload = function (path, offset, size, cb){
   var self = this;
-  var xmlhttp = new XMLHttpRequest();
+  var xmlhttp = new this.XHR();
   xmlhttp.open('get', 'https://api-content.dropbox.com/1/files/auto' + path, true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
   xmlhttp.setRequestHeader('Range', 'bytes=' + offset + '-' + ( offset + size - 1 ));
-  xmlhttp.responseType = 'buffer';
+  xmlhttp.responseType = this._IS_WEB ? 'arraybuffer' : 'buffer';
   xmlhttp.onload = function () {
     var res = xmlhttp.response;
-    var length = res.length;
+    var length = self._IS_WEB ? res.byteLength : res.length;
     cb(null, {
       data: res,
       length: length
@@ -183,7 +190,7 @@ Dropbox.prototype.getAccessToken = function (api_key, api_secret, device_code, c
   };
   var strParams = 'code=' + encodeURIComponent(params.code) +
     '&grant_type=' + encodeURIComponent(params.grant_type);
-  var xmlhttp = new XMLHttpRequest();
+  var xmlhttp = new this.XHR();
   xmlhttp.open('post', linkToken, true);
   xmlhttp.setRequestHeader('Accept', 'application/json');
   xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
