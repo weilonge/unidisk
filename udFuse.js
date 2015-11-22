@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-var fuse = require('fuse-bindings')
+var fuse = require('fuse-bindings');
 var options = {};  // See parseArgs()
 var udManager = require('./helper/udManager');
 require('./helper/ObjectExtend');
@@ -7,9 +7,11 @@ require('./helper/ObjectExtend');
 const EPERM = -1;
 const ENOENT = -2;
 
+var udm;
+
 function getattr(path, cb) {
 	//console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
-	udManager.getFileMeta(path, function (error, response){
+	udm.getFileMeta(path, function (error, response){
 		var stat = {};
 		var err = 0; // assume success
 		if( !response.data || !response.data.list){
@@ -33,11 +35,11 @@ function getattr(path, cb) {
 		}
 		cb( err, stat );
 	});
-};
+}
 
 function readdir(path, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
-	udManager.getFileList(path, function(error, response){
+	udm.getFileList(path, function(error, response){
 		var names = [];
 		var err = 0; // assume success
 		if( !response.data ){
@@ -55,7 +57,7 @@ function readdir(path, cb) {
 
 function open(path, flags, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
-	udManager.getFileMeta(path, function (error, response){
+	udm.getFileMeta(path, function (error, response){
 		var stat = {};
 		var err = 0; // assume success
 		if( !response.data || !response.data.list){
@@ -69,7 +71,7 @@ function open(path, flags, cb) {
 
 function read(path, fd, buf, len, offset, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
-	udManager.getFileMeta(path, function (error, response){
+	udm.getFileMeta(path, function (error, response){
 		var err = 0; // assume success
 		if( !response.data || !response.data.list){
 			err = ENOENT; // -ENOENT
@@ -79,7 +81,7 @@ function read(path, fd, buf, len, offset, cb) {
 			err = EPERM; // -EPERM
 			cb( err );
 		}else{
-			udManager.downloadFileInRangeByCache(path, buf, offset, len, function(error){
+			udm.downloadFileInRangeByCache(path, buf, offset, len, function(error){
 				cb(len);
 			});
 		}
@@ -125,7 +127,8 @@ function init(cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
 	console.log("File system started at " + options.mountPoint);
 	console.log("To stop it, type this in another shell: fusermount -u " + options.mountPoint);
-	udManager.init({
+	udm = new udManager();
+	udm.init({
 		moduleOpt: options.moduleOpt,
 		metaCacheModule: require('./helper/MetaCache'),
 		dataCacheModule: require('./helper/DataCache'),
@@ -136,13 +139,13 @@ function init(cb) {
 
 function setxattr(path, name, value, size, a, b, c) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
-	console.log("Setxattr called:", path, name, value, size, a, b, c)
+	console.log("Setxattr called:", path, name, value, size, a, b, c);
 	cb(0);
 }
 
 function statfs(path, cb) {
 	console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
-	udManager.showStat(function(error, response){
+	udm.showStat(function(error, response){
 		var block_size = 4096;
 		//f_bsize = block_size;
 		//f_blocks = (fsblkcnt_t) (quota/block_size);
@@ -191,7 +194,7 @@ var handlers = {
 
 function usage() {
 	console.log();
-	console.log("Usage: node udFuse.js [options] mountPoint\n")
+	console.log("Usage: node udFuse.js [options] mountPoint\n");
 	console.log("Options:");
 	console.log("-d                 : make FUSE print debug statements.");
 	console.log("-m                 : specify web storage module.");
@@ -210,6 +213,14 @@ function parseArgs() {
 	}
 	options.mountPoint = args.pop();
 	options.moduleOpt = {};
+
+	function createModuleOpt(item, index){
+		var pair = item.split('=');
+		var key = pair[0];
+		var val = pair[1];
+		options.moduleOpt[key] = val;
+	}
+
 	for( i = 2; i < args.length; i++) {
 		if (args[i] === '-d') {
 			options.debugFuse = true;
@@ -217,12 +228,7 @@ function parseArgs() {
 			options.module = args[++i];
 		} else if (args[i] === '-o') {
 			var mOpts = args[++i].split(',');
-			mOpts.forEach(function (item, index){
-				var pair = item.split('=');
-				var key = pair[0];
-				var val = pair[1];
-				options.moduleOpt[key] = val;
-			});
+			mOpts.forEach(createModuleOpt);
 		} else {
 			return false;
 		}

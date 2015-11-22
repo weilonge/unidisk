@@ -5,9 +5,9 @@ var UD_BLOCK_SIZE = Settings.get('block_size');
 var UD_QUEUE_CONCURRENCY = Settings.get('queue_concurrency');
 var UD_PREFETCH_SIZE = Settings.get('prefetch_blocks') * UD_BLOCK_SIZE;
 
-var udManager = {};
+var udManager = function(){};
 
-udManager._isIllegalFileName = function (path) {
+udManager.prototype._isIllegalFileName = function (path) {
 	var list = path.split('/');
 	for(var i = 0; i < list.length; i++){
 		if( list[i].indexOf('.') === 0 ){
@@ -15,9 +15,9 @@ udManager._isIllegalFileName = function (path) {
 		}
 	}
 	return false;
-}
+};
 
-udManager.queueHandler = function (id, task, callback) {
+udManager.prototype.queueHandler = function (id, task, callback) {
 	console.log('  [B] ' + task.path + "|" + task.offset + '| downloading...');
 	var self = this;
 	task.status = "DOWNLOADING";
@@ -31,7 +31,7 @@ udManager.queueHandler = function (id, task, callback) {
 	});
 };
 
-udManager.init = function(options){
+udManager.prototype.init = function(options){
 	this.webStorage = new options.webStorageModule();
 	this.metaCache = options.metaCacheModule;
 	this.dataCache = options.dataCacheModule;
@@ -41,30 +41,30 @@ udManager.init = function(options){
 	this.dataCache.init(UD_BLOCK_SIZE);
 	this.FileDownloadQueue = foco.priorityQueue(
 		this.queueHandler.bind(this), UD_QUEUE_CONCURRENCY);
-}
+};
 
-udManager.showStat = function (cb) {
+udManager.prototype.showStat = function (cb) {
 	var self = this;
 	var retry = function () {
-		if( udManager.QuotaCache ) {
-			cb(null, udManager.QuotaCache );
+		if( self.QuotaCache ) {
+			cb(null, self.QuotaCache );
 		} else {
 			self.webStorage.quota(function(error, response){
 				if(error){
 					console.log("" + new Date () + "| " + error);
 					retry();
 				}else{
-					udManager.QuotaCache = response;
+					self.QuotaCache = response;
 					cb(error, response);
 				}
 			});
 		}
 	};
 	retry();
-}
+};
 
-udManager.getFileMeta = function (path, cb) {
-	if(udManager._isIllegalFileName(path)){
+udManager.prototype.getFileMeta = function (path, cb) {
+	if(this._isIllegalFileName(path)){
 		cb(null, {data: null});
 		return ;
 	}
@@ -86,10 +86,10 @@ udManager.getFileMeta = function (path, cb) {
 		}
 	};
 	retry();
-}
+};
 
-udManager.getFileList = function (path, cb) {
-	if(udManager._isIllegalFileName(path)){
+udManager.prototype.getFileList = function (path, cb) {
+	if(this._isIllegalFileName(path)){
 		cb(null, {data: null});
 		return ;
 	}
@@ -111,9 +111,9 @@ udManager.getFileList = function (path, cb) {
 		}
 	};
 	retry();
-}
+};
 
-udManager._generateRequestList = function(fileMeta, offset, size, fileSize){
+udManager.prototype._generateRequestList = function(fileMeta, offset, size, fileSize){
 	const endPos = offset + size;
 	var requestList = [];
 
@@ -137,7 +137,7 @@ udManager._generateRequestList = function(fileMeta, offset, size, fileSize){
 
 	const prefetchEndPos = endPos + UD_PREFETCH_SIZE;
 	for(; alignedOffset < prefetchEndPos && alignedOffset < fileSize; alignedOffset += UD_BLOCK_SIZE ){
-		var task = {
+		var prefetchTask = {
 			path: fileMeta.path,
 			totalSize: fileMeta.size,
 			mtime: fileMeta.mtime,
@@ -147,16 +147,16 @@ udManager._generateRequestList = function(fileMeta, offset, size, fileSize){
 			offset: alignedOffset,
 			size: ((alignedOffset + UD_BLOCK_SIZE) > fileSize ? (fileSize - alignedOffset) : UD_BLOCK_SIZE )
 		};
-		var taskMd5sum = this.dataCache.generateKey(task);
-		task.md5sum = taskMd5sum;
+		var prefetchTaskMd5sum = this.dataCache.generateKey(prefetchTask);
+		prefetchTask.md5sum = prefetchTaskMd5sum;
 
-		requestList.push(task);
+		requestList.push(prefetchTask);
 	}
 
 	return requestList;
-}
+};
 
-udManager._isAllRequestDone = function (downloadRequest){
+udManager.prototype._isAllRequestDone = function (downloadRequest){
 	var done = true;
 	for(var req in downloadRequest){
 		var task = downloadRequest[req];
@@ -173,9 +173,9 @@ udManager._isAllRequestDone = function (downloadRequest){
 		}
 	}
 	return done;
-}
+};
 
-udManager._requestPushAndDownload = function (path, downloadRequest, cb){
+udManager.prototype._requestPushAndDownload = function (path, downloadRequest, cb){
 	var self = this;
 	foco.each(downloadRequest, function(index, task, callback){
 		var taskMd5sum = task.md5sum;
@@ -183,21 +183,21 @@ udManager._requestPushAndDownload = function (path, downloadRequest, cb){
 
 		if (data) {
 			console.log('  [C1] ' + data.path + " is in cache: " + data.status + "| " + task.offset);
-			udManager.FileDownloadQueue.priorityChange(taskMd5sum, 0);
+			self.FileDownloadQueue.priorityChange(taskMd5sum, 0);
 			callback();
 		} else if ( task.priority === "PREFETCH" ) {
 			self.dataCache.update(taskMd5sum, task);
-			udManager.FileDownloadQueue.push(taskMd5sum, 1, task);
+			self.FileDownloadQueue.push(taskMd5sum, 1, task);
 			callback();
 		}else{
 			self.dataCache.update(taskMd5sum, task);
-			udManager.FileDownloadQueue.push(taskMd5sum, 0, task);
+			self.FileDownloadQueue.push(taskMd5sum, 0, task);
 			callback();
 		}
 	}, function(err){
 		// Verify the download request is all finished or not.
 		function retry () {
-			if( udManager._isAllRequestDone(downloadRequest) ){
+			if( self._isAllRequestDone(downloadRequest) ){
 				console.log('  [D] ' + 'All requests are done.');
 				cb();
 			}else {
@@ -207,19 +207,19 @@ udManager._requestPushAndDownload = function (path, downloadRequest, cb){
 		}
 		retry();
 	});
-}
+};
 
-udManager.downloadFileInRangeByCache = function(path, buffer, offset, size, cb) {
+udManager.prototype.downloadFileInRangeByCache = function(path, buffer, offset, size, cb) {
 	console.log('{{');
 	console.log('  [A] ' + path + ' ' + offset + ' ' + size);
 	var self = this;
-	udManager.getFileMeta(path, function(error, response){
+	self.getFileMeta(path, function(error, response){
 		const totalSize = response.data.list[0].size;
 		// 1. Split the download request.
-		var requestList = udManager._generateRequestList(response.data.list[0], parseInt(offset), parseInt(size), totalSize);
+		var requestList = self._generateRequestList(response.data.list[0], parseInt(offset), parseInt(size), totalSize);
 
 		// 2. Push downloading request.
-		udManager._requestPushAndDownload(path, requestList, function(){
+		self._requestPushAndDownload(path, requestList, function(){
 			// 3. All requests are done. Aggregate all data.
 			// Read the request data from files.
 			self.dataCache.readCache(path, buffer, offset, size, requestList, function(){
@@ -229,16 +229,16 @@ udManager.downloadFileInRangeByCache = function(path, buffer, offset, size, cb) 
 			});
 		});
 	});
-}
+};
 
-udManager.downloadFileInRange = function(path, offset, size, cb) {
+udManager.prototype.downloadFileInRange = function(path, offset, size, cb) {
 	var self = this;
 	var retry = function () {
 		self.webStorage.getFileDownload(path, offset, size, function(error, response){
 			if(error){
 				console.log('[ERROR] retry, error happened: ' + error);
 				setTimeout(retry , 800);
-			}else if( !response || !response.data || !response.data instanceof Buffer ){
+			}else if( !response || !response.data || !response.length){
 				console.log('[ERROR] retry, error response: ' + response);
 				setTimeout(retry , 800);
 			}else if( size != response.length ){
@@ -248,11 +248,11 @@ udManager.downloadFileInRange = function(path, offset, size, cb) {
 				cb(error, response);
 			}
 		});
-	}
+	};
 	retry();
-}
+};
 
-udManager.downloadFileInMultiRange = function(path, list, cb) {
+udManager.prototype.downloadFileInMultiRange = function(path, list, cb) {
 	var listArray = null;
 	if( typeof list === "string" ){
 		try {
@@ -265,7 +265,7 @@ udManager.downloadFileInMultiRange = function(path, list, cb) {
 		listArray = list.list;
 	}
 	foco.each(listArray, function(index, item, callback){
-		udManager.downloadFileInRange(path, item.offset, item.size, function(error, response){
+		self.downloadFileInRange(path, item.offset, item.size, function(error, response){
 			console.log(response.data);
 			callback();
 		});
@@ -274,6 +274,6 @@ udManager.downloadFileInMultiRange = function(path, list, cb) {
 			data: "OK!"
 		});
 	});
-}
+};
 
 module.exports = udManager;
