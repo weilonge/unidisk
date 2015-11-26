@@ -32,13 +32,16 @@ udManager.prototype.queueHandler = function (id, task, callback) {
 };
 
 udManager.prototype.init = function(options){
+	this.cacheDisable = options.moduleOpt.cacheDisable;
 	this.webStorage = new options.webStorageModule();
-	this.metaCache = options.metaCacheModule;
+	if (!this.cacheDisable) {
+		this.metaCache = options.metaCacheModule;
+		this.metaCache.init();
+	}
 	this.dataCache = options.dataCacheModule;
+	this.dataCache.init(UD_BLOCK_SIZE);
 
 	this.webStorage.init(options.moduleOpt);
-	this.metaCache.init();
-	this.dataCache.init(UD_BLOCK_SIZE);
 	this.FileDownloadQueue = foco.priorityQueue(
 		this.queueHandler.bind(this), UD_QUEUE_CONCURRENCY);
 };
@@ -70,7 +73,7 @@ udManager.prototype.getFileMeta = function (path, cb) {
 	}
 	var self = this;
 	var retry = function () {
-		var meta = self.metaCache.get(path);
+		var meta = !self.cacheDisable ? self.metaCache.get(path) : null;
 		if (meta) {
 			cb(null, { data : meta });
 		}else{
@@ -79,7 +82,9 @@ udManager.prototype.getFileMeta = function (path, cb) {
 					console.log("" + new Date () + "| " + error);
 					retry();
 				}else{
-					self.metaCache.update(path, response.data);
+					if (!self.cacheDisable) {
+						self.metaCache.update(path, response.data);
+					}
 					cb(error, response);
 				}
 			});
@@ -95,7 +100,7 @@ udManager.prototype.getFileList = function (path, cb) {
 	}
 	var self = this;
 	var retry = function () {
-		var list = self.metaCache.getList(path);
+		var list = !self.cacheDisable ? self.metaCache.getList(path) : null;
 		if (list) {
 			cb(null, { data : list });
 		}else{
@@ -104,7 +109,9 @@ udManager.prototype.getFileList = function (path, cb) {
 					console.log("" + new Date () + "| " + error);
 					retry();
 				}else{
-					self.metaCache.updateList(path, response.data);
+					if (!self.cacheDisable) {
+						self.metaCache.updateList(path, response.data);
+					}
 					cb(error, response);
 				}
 			});
