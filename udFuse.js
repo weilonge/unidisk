@@ -242,6 +242,8 @@ function parseArgs() {
 		if (options.debugFuse)
 			console.log("FUSE debugging enabled");
 		try {
+			handlers.force = true;
+			handlers.options = ['allow_other', 'auto_cache', 'rdonly'];
 			fuse.mount(options.mountPoint, handlers);
 		} catch (e) {
 			console.log("Exception when starting file system: " + e);
