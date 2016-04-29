@@ -18,7 +18,7 @@ function getattr(path, cb) {
 			err = ENOENT; // -ENOENT
 		}else if( response.data.list[0].isdir == 1 ){
 			stat.size = 4096;   // standard size of a directory
-			stat.mode = 040550; // directory with 777 permissions
+			stat.mode = 040555; // directory with 777 permissions
 			stat.mtime = new Date(response.data.list[0].mtime);
 			stat.atime = new Date(response.data.list[0].mtime);
 			stat.ctime = new Date(response.data.list[0].ctime);
@@ -26,7 +26,7 @@ function getattr(path, cb) {
 			stat.gid = process.getgid();
 		}else{
 			stat.size = response.data.list[0].size;
-			stat.mode = 0100440; // file with 666 permissions
+			stat.mode = 0100444; // file with 666 permissions
 			stat.mtime = new Date(response.data.list[0].mtime);
 			stat.atime = new Date(response.data.list[0].mtime);
 			stat.ctime = new Date(response.data.list[0].ctime);
@@ -242,6 +242,8 @@ function parseArgs() {
 		if (options.debugFuse)
 			console.log("FUSE debugging enabled");
 		try {
+			handlers.force = true;
+			handlers.options = ['allow_other'];
 			fuse.mount(options.mountPoint, handlers);
 		} catch (e) {
 			console.log("Exception when starting file system: " + e);

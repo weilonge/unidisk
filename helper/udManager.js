@@ -8,6 +8,9 @@ var UD_PREFETCH_SIZE = Settings.get('prefetch_blocks') * UD_BLOCK_SIZE;
 var udManager = function(){};
 
 udManager.prototype._isIllegalFileName = function (path) {
+	if (path.match(/\*/gi)) {
+		return true;
+	}
 	var list = path.split('/');
 	for(var i = 0; i < list.length; i++){
 		if( list[i].indexOf('.') === 0 ){
@@ -51,7 +54,7 @@ udManager.prototype.showStat = function (cb) {
 		} else {
 			self.webStorage.quota(function(error, response){
 				if(error){
-					console.log("" + new Date () + "| " + error);
+					console.log("" + new Date () + "|showStat| " + JSON.stringify(error));
 					retry();
 				}else{
 					self.QuotaCache = response;
@@ -76,7 +79,7 @@ udManager.prototype.getFileMeta = function (path, cb) {
 		}else{
 			self.webStorage.getFileMeta(path, function(error, response){
 				if(error){
-					console.log("" + new Date () + "| " + error);
+					console.log("" + new Date () + "|getFileMeta - " + path + "| " + JSON.stringify(error));
 					retry();
 				}else{
 					self.metaCache.update(path, response.data);
@@ -101,7 +104,7 @@ udManager.prototype.getFileList = function (path, cb) {
 		}else{
 			self.webStorage.getFileList(path, function(error, response){
 				if(error){
-					console.log("" + new Date () + "| " + error);
+					console.log("" + new Date () + "|getFileList - " + path + "| " + JSON.stringify(error));
 					retry();
 				}else{
 					self.metaCache.updateList(path, response.data);
