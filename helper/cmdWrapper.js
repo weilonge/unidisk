@@ -28,7 +28,7 @@ exports.invokeCommand = function (argv, commandSet, ignoreArgNum, cb){
 	cmdArgv.push(cb);
 	// argv = [ cmd, p1, p2] >>> functionSet.cmd(p1, p2, callback);
 	if(funcS.init){
-		funcS.init();
+		funcS.init({});
 	}
 	funcP.apply(funcS, cmdArgv);
 	return 0;

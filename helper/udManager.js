@@ -47,7 +47,9 @@ udManager.prototype.showStat = function (cb) {
 	var self = this;
 	var retry = function () {
 		if( self.QuotaCache ) {
-			cb(null, self.QuotaCache );
+			process.nextTick(function () {
+				cb(null, self.QuotaCache );
+			});
 		} else {
 			self.webStorage.quota(function(error, response){
 				if(error){
@@ -65,14 +67,18 @@ udManager.prototype.showStat = function (cb) {
 
 udManager.prototype.getFileMeta = function (path, cb) {
 	if(this._isIllegalFileName(path)){
-		cb(null, {data: null});
+		process.nextTick(function () {
+			cb(null, {data: null});
+		});
 		return ;
 	}
 	var self = this;
 	var retry = function () {
 		var meta = self.metaCache.get(path);
 		if (meta) {
-			cb(null, { data : meta });
+			process.nextTick(function () {
+				cb(null, { data : meta });
+			});
 		}else{
 			self.webStorage.getFileMeta(path, function(error, response){
 				if(error){
@@ -90,14 +96,18 @@ udManager.prototype.getFileMeta = function (path, cb) {
 
 udManager.prototype.getFileList = function (path, cb) {
 	if(this._isIllegalFileName(path)){
-		cb(null, {data: null});
+		process.nextTick(function () {
+			cb(null, {data: null});
+		});
 		return ;
 	}
 	var self = this;
 	var retry = function () {
 		var list = self.metaCache.getList(path);
 		if (list) {
-			cb(null, { data : list });
+			process.nextTick(function () {
+				cb(null, { data : list });
+			});
 		}else{
 			self.webStorage.getFileList(path, function(error, response){
 				if(error){
