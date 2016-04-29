@@ -1,0 +1,11 @@
+{
+  "plugins": {
+    "lint": {
+      "maximum-line-length": 80000,
+      "fenced-code-flag": {"allowEmpty": true}
+    }
+  },
+  "settings": {
+    "commonmark": true
+  }
+}
