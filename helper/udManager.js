@@ -1,3 +1,4 @@
+var EventEmitter = require('events').EventEmitter;
 var foco = require('foco');
 var Settings = require('./Settings');
 
@@ -5,7 +6,9 @@ var UD_BLOCK_SIZE = Settings.get('block_size');
 var UD_QUEUE_CONCURRENCY = Settings.get('queue_concurrency');
 var UD_PREFETCH_SIZE = Settings.get('prefetch_blocks') * UD_BLOCK_SIZE;
 
-var udManager = function(){};
+var udManager = function(){
+	this.taskEvent = new EventEmitter();
+};
 
 udManager.prototype._isIllegalFileName = function (path) {
 	var list = path.split('/');
@@ -26,6 +29,7 @@ udManager.prototype.queueHandler = function (id, task, callback) {
 
 		// Write the buffer to the cache file.
 		self.dataCache.writeCache(task, response.data, function(){
+			self.taskEvent.emit('done');
 			callback();
 		});
 	});
@@ -187,12 +191,24 @@ udManager.prototype._isAllRequestDone = function (downloadRequest){
 
 udManager.prototype._requestPushAndDownload = function (path, downloadRequest, cb){
 	var self = this;
+
+	function checkRequest() {
+		// Verify the download requests are all finished or not.
+		if( self._isAllRequestDone(downloadRequest) ){
+			console.log('  [D] ' + 'All requests are done.');
+			self.taskEvent.removeListener('done', checkRequest);
+			cb();
+		}else {
+			console.log("keep waiting for all requests done...");
+		}
+	}
+	self.taskEvent.on('done', checkRequest);
 	foco.each(downloadRequest, function(index, task, callback){
 		var taskMd5sum = task.md5sum;
 		var data = self.dataCache.get(taskMd5sum);
 
 		if (data) {
-			console.log('  [C1] ' + data.path + " is in cache: " + data.status + "| " + task.offset);
+			//console.log('  [C1] ' + data.path + " is in cache: " + data.status + "| " + task.offset);
 			self.FileDownloadQueue.priorityChange(taskMd5sum, 0);
 			callback();
 		} else if ( task.priority === "PREFETCH" ) {
@@ -205,17 +221,7 @@ udManager.prototype._requestPushAndDownload = function (path, downloadRequest, c
 			callback();
 		}
 	}, function(err){
-		// Verify the download request is all finished or not.
-		function retry () {
-			if( self._isAllRequestDone(downloadRequest) ){
-				console.log('  [D] ' + 'All requests are done.');
-				cb();
-			}else {
-				console.log("retry to wait all requests done...");
-				setTimeout(retry, 1000);
-			}
-		}
-		retry();
+		checkRequest();
 	});
 };
 
