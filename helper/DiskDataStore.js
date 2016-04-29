@@ -5,6 +5,7 @@ var DiskDataStore = {};
 
 DiskDataStore.init = function (){
   this._CACHE_PATH = Settings.get('cache_path');
+  fs.mkdirSync(this._CACHE_PATH);
 };
 
 DiskDataStore.deleteEntry = function (key){

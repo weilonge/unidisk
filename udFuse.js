@@ -242,6 +242,7 @@ function parseArgs() {
 		if (options.debugFuse)
 			console.log("FUSE debugging enabled");
 		try {
+			handlers.force = true;
 			fuse.mount(options.mountPoint, handlers);
 		} catch (e) {
 			console.log("Exception when starting file system: " + e);
@@ -256,4 +257,3 @@ process.on('SIGINT', function () {
     process.exit();
   });
 });
-
