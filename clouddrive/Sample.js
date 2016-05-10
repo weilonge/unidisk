@@ -1,4 +1,11 @@
-var Sample = function (){};
+const EventEmitter = require('events');
+const util = require('util');
+const fs = require('fs');
+
+var Sample = function (){
+  EventEmitter.call(this);
+};
+util.inherits(Sample, EventEmitter);
 
 function str2ab(str) {
   var buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
@@ -12,7 +19,7 @@ function str2ab(str) {
 Sample.prototype.init = function (options){
   this._IS_WEB = typeof document !== 'undefined' &&
     typeof window !== 'undefined';
-  var jsonFileName = options.JSONPath;
+  var jsonFileName = options.JSONPath, self = this;
   if (this._IS_WEB) {
     var xmlhttp = new XMLHttpRequest();
     xmlhttp.open('get', jsonFileName, false);
@@ -22,6 +29,21 @@ Sample.prototype.init = function (options){
   } else {
     this._TEST_DATA = require(jsonFileName);
   }
+
+  fs.watchFile(jsonFileName, function (curr, prev) {
+    self.emit('fileChange', {
+      path: '/',
+      recursive: true,
+      DEBUG: {
+        current: curr,
+        previous: prev
+      }
+    });
+    self._TEST_DATA = null;
+    // A technique here to remove the cached module by require.
+    delete require.cache[require.resolve(jsonFileName)];
+    self._TEST_DATA = require(jsonFileName);
+  });
 };
 
 Sample.prototype._isObject = function (obj) {

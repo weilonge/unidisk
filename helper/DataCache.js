@@ -1,5 +1,6 @@
 var DataCache = {};
 var Settings = require('./Settings');
+var Path = require('path');
 
 DataCache.init = function (blockSize) {
   this._IS_WEB = typeof document !== 'undefined' &&
@@ -110,6 +111,33 @@ DataCache.readCache = function (path, buffer, offset, size, requestList, cb){
     }
   }
   cb();
+};
+
+DataCache._generateKeyListByPath = function (path, recursive) {
+  var list = [];
+  for (var i in this._fileDataCache) {
+    var t = this._fileDataCache[i].path;
+    if (recursive) {
+      if (Path.relative(path, t).indexOf('..') !== 0) {
+        list.push(this._fileDataCache[i].md5sum);
+      }
+    } else if (path === t) {
+      list.push(this._fileDataCache[i].md5sum);
+    }
+  }
+  return list;
+};
+
+DataCache.clear = function (path, recursive){
+  var list = this._generateKeyListByPath(path, recursive);
+  for (var i = 0; i < list.length; i++) {
+    var key = list[i];
+    this._removeEntry(key);
+    var index = this._priorityQueue.indexOf(key);
+    if (index !== -1) {
+      this._priorityQueue.splice(index, 1);
+    }
+  }
 };
 
 DataCache.generateKey = function (task){

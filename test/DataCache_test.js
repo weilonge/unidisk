@@ -8,7 +8,7 @@ describe('DataCache', function() {
     for (var i = start; i < n + start; i++) {
       result.push({
         task: {
-          path: 'test' + i,
+          path: '/test' + i,
           totalSize: i,
           mtime: 1000000,
           status: "INIT",
@@ -63,6 +63,8 @@ describe('DataCache', function() {
           var task = tasks[i];
           assert.equal(DataCache.get(task.md5sum, null));
         }
+        DataCache.clear('/test6', true);
+        assert.equal(DataCache.get(tasks[6].md5sum, null));
         done();
       });
     });

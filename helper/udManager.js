@@ -36,11 +36,16 @@ udManager.prototype.queueHandler = function (id, task, callback) {
 };
 
 udManager.prototype.init = function(options){
+	var self = this;
 	this.webStorage = new options.webStorageModule();
 	this.metaCache = options.metaCacheModule;
 	this.dataCache = options.dataCacheModule;
 
 	this.webStorage.init(options.moduleOpt);
+	this.webStorage.on('fileChange', function (evt) {
+		self.metaCache.clear(evt.path, evt.recursive);
+		self.dataCache.clear(evt.path, evt.recursive);
+	});
 	this.metaCache.init();
 	this.dataCache.init(UD_BLOCK_SIZE);
 	this.FileDownloadQueue = foco.priorityQueue(
