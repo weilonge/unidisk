@@ -2,7 +2,13 @@ var fs = require('fs');
 
 var Settings = {};
 
-Settings.init = function (){};
+Settings.init = function (){
+  if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+    this._loadWebSettings();
+  } else {
+    this._loadNodeSettings();
+  }
+};
 
 Settings._loadNodeSettings = function (){
   var settingsFileName = process.env.HOME + '/.unidisk/' + 'settings.json';
@@ -39,7 +45,7 @@ Settings.get = function (key){
 };
 
 Settings.set = function (key, value){
-
+  this.table[key] = value;
 };
 
 module.exports = Settings;

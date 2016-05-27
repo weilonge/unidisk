@@ -27,6 +27,7 @@ DataCache.update = function (key, data) {
     } else {
       // Remove an entry and delete cache file.
       var deletingCandidateKey = this._popLowPriorityKey();
+      // TODO: the task should be made sure it's in the status DONE.
       this._removeEntry(deletingCandidateKey);
       this._pushEntry(key, data);
     }
