@@ -1,6 +1,11 @@
 var Settings = require('../helper/Settings');
+const EventEmitter = require('events');
+const util = require('util');
 
-var Dropbox = function (){};
+var Dropbox = function (){
+  EventEmitter.call(this);
+};
+util.inherits(Dropbox, EventEmitter);
 
 Dropbox.prototype.init = function (options){
   this._IS_WEB = typeof document !== 'undefined' &&
@@ -12,6 +17,74 @@ Dropbox.prototype.init = function (options){
   } else {
     this.USERTOKEN = Settings.get('dropbox_token');
   }
+  this.registerChange();
+};
+
+Dropbox.prototype.registerChange = function (){
+  var self = this;
+  var latestCursor;
+  function getLatestCursor(callback) {
+    var xmlhttp = new self.XHR();
+    xmlhttp.open('post', 'https://api.dropboxapi.com/1/delta/latest_cursor', true);
+    xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+    xmlhttp.setRequestHeader('Accept', 'application/json');
+    xmlhttp.onload = function () {
+      self._handleJson(xmlhttp, callback);
+    };
+    xmlhttp.send();
+  }
+
+  function sendLongPoll(cursor, callback) {
+    var xmlhttp = new self.XHR();
+    xmlhttp.open('get', 'https://notify.dropboxapi.com/1/longpoll_delta?cursor=' + cursor, true);
+    xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+    xmlhttp.setRequestHeader('Accept', 'application/json');
+    xmlhttp.onload = function () {
+      self._handleJson(xmlhttp, callback);
+    };
+    xmlhttp.send();
+  }
+
+  function getDelta(cursor, callback) {
+    var xmlhttp = new self.XHR();
+    xmlhttp.open('post', 'https://api.dropboxapi.com/1/delta?cursor=' + cursor, true);
+    xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+    xmlhttp.setRequestHeader('Accept', 'application/json');
+    xmlhttp.onload = function () {
+      self._handleJson(xmlhttp, callback);
+    };
+    xmlhttp.send();
+  }
+
+  function repeat(callback) {
+    sendLongPoll(latestCursor, function (error, response) {
+      getDelta(latestCursor, function (error, response){
+        var delta = response.data;
+        getLatestCursor(function (error, response) {
+          latestCursor = response.data.cursor;
+          callback(null, delta);
+          repeat(callback);
+        });
+      });
+    });
+  }
+
+  getLatestCursor(function (error, response) {
+    latestCursor = response.data.cursor;
+    repeat(function (error, response) {
+      console.log(response);
+      if (response.entries && response.entries.length === 0) {
+        return;
+      }
+      self.emit('fileChange', {
+        path: '/',
+        recursive: true,
+        DEBUG: {
+          response: response
+        }
+      });
+    });
+  });
 };
 
 Dropbox.prototype._handleJson = function (xmlhttp, cb){
