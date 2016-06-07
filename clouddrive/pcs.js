@@ -1,5 +1,7 @@
 var unirest = require('unirest');
 var Settings = require('../helper/Settings');
+const EventEmitter = require('events');
+const util = require('util');
 
 var XFR_ESTIMATING_MIN_SPEED = 20 * 1024; // n bytes/sec
 var XFR_ESTIMATING_MIN_TIME = 20; // secs
@@ -12,7 +14,10 @@ var PCS_HOSTNAME_C = "c.pcs.baidu.com";
 var PCSURI = "/rest/2.0/pcs";
 var UD_ROOTPATH = "/apps/APP_ROOT"
 
-var pcs = function (){};
+var pcs = function (){
+  EventEmitter.call(this);
+};
+util.inherits(pcs, EventEmitter);
 
 pcs.prototype.init = function (){
   this.USERTOKEN = Settings.get('baidu_pcs_token');
