@@ -146,6 +146,14 @@ pcs.prototype._download = function (options, cb){
   });
 }
 
+pcs.prototype.openFile = function (path, flags, fd, cb) {
+  cb(null, null);
+};
+
+pcs.prototype.commitFileData = function (path, fd, cb){
+  cb(null, null);
+};
+
 pcs.prototype.quota = function (cb){
   this._execute({
     cmd: "quota",
