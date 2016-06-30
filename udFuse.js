@@ -2,6 +2,7 @@
 var fuse = require('fuse-bindings');
 var options = {};  // See parseArgs()
 var udManager = require('./helper/udManager');
+var logger = require('./helper/log');
 require('./helper/ObjectExtend');
 
 const EPERM = -1;
@@ -10,7 +11,7 @@ const ENOENT = -2;
 var udm;
 
 function getattr(path, cb) {
-  //console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
+  logger.info('[' + __function + ',' + __line + '] ' + path);
   udm.getFileMeta(path, function (error, response){
     var stat = {};
     var err = 0; // assume success
@@ -38,7 +39,7 @@ function getattr(path, cb) {
 }
 
 function readdir(path, cb) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
+  logger.info('[' + __function + ',' + __line + '] ' + path);
   udm.getFileList(path, function(error, response){
     var names = [];
     var err = 0; // assume success
@@ -46,7 +47,7 @@ function readdir(path, cb) {
       err = ENOENT; // -ENOENT
     }else{
       for(var fp in response.data.list){
-        var filePathSplited = response.data.list[fp].path.split("/");
+        var filePathSplited = response.data.list[fp].path.split('/');
         var fileName = filePathSplited[filePathSplited.length - 1];
         names.push(fileName);
       }
@@ -56,7 +57,7 @@ function readdir(path, cb) {
 }
 
 function open(path, flags, cb) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
+  logger.info('[' + __function + ',' + __line + '] ' + path);
   udm.getFileMeta(path, function (error, response){
     var stat = {};
     var err = 0; // assume success
@@ -70,7 +71,7 @@ function open(path, flags, cb) {
 }
 
 function read(path, fd, buf, len, offset, cb) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
+  logger.info('[' + __function + ',' + __line + '] ' + path);
   udm.getFileMeta(path, function (error, response){
     var err = 0; // assume success
     if( !response.data || !response.data.list){
@@ -89,44 +90,43 @@ function read(path, fd, buf, len, offset, cb) {
 }
 
 function write(path, offset, len, buf, fh, cb) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
+  logger.info('[' + __function + ',' + __line + '] ' + path);
   cb(EPERM);
 }
 
 function release(path, fh, cb) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
+  logger.info('[' + __function + ',' + __line + '] ' + path);
   cb(0);
 }
 
 function create (path, mode, cb) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
+  logger.info('[' + __function + ',' + __line + '] ' + path);
   cb(EPERM);
 }
 
 function unlink(path, cb) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
+  logger.info('[' + __function + ',' + __line + '] ' + path);
   cb(EPERM);
 }
 
 function rename(src, dst, cb) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
+  logger.info('[' + __function + ',' + __line + '] ' + path);
   cb(EPERM);
 }
 
 function mkdir(path, mode, cb) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
+  logger.info('[' + __function + ',' + __line + '] ' + path);
   cb(EPERM);
 }
 
 function rmdir(path, cb) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
+  logger.info('[' + __function + ',' + __line + '] ' + path);
   cb(EPERM);
 }
 
 function init(cb) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
-  console.log("File system started at " + options.mountPoint);
-  console.log("To stop it, type this in another shell: fusermount -u " + options.mountPoint);
+  logger.info('[' + __function + ',' + __line + '] ');
+  logger.info('File system started at ' + options.mountPoint);
   udm = new udManager();
   udm.init({
     moduleOpt: options.moduleOpt,
@@ -138,13 +138,13 @@ function init(cb) {
 }
 
 function setxattr(path, name, value, size, a, b, c) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line + " " + path);
-  console.log("Setxattr called:", path, name, value, size, a, b, c);
+  logger.info('[' + __function + ',' + __line + '] ' + path);
+  logger.verbose('Setxattr called:', path, name, value, size, a, b, c);
   cb(0);
 }
 
 function statfs(path, cb) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
+  logger.info('[' + __function + ',' + __line + '] ');
   udm.showStat(function(error, response){
     var block_size = 4096;
     //f_bsize = block_size;
@@ -169,8 +169,8 @@ function statfs(path, cb) {
 }
 
 function destroy(cb) {
-  console.log("[DEBUG] " + new Date().getTime() + " " + __function + " : " + __line);
-  console.log("File system stopped");
+  logger.info('[' + __function + ',' + __line + '] ');
+  logger.info('File system stopped');
   cb();
 }
 
@@ -193,16 +193,17 @@ var handlers = {
 };
 
 function usage() {
-  console.log();
-  console.log("Usage: node udFuse.js [options] mountPoint\n");
-  console.log("Options:");
-  console.log("-d                 : make FUSE print debug statements.");
-  console.log("-m                 : specify web storage module.");
-  console.log("-o                 : options for the module.");
-  console.log();
-  console.log("Example:");
-  console.log("node udFuse.fs -d /tmp/mnt");
-  console.log();
+  console.log(
+    'Usage: node udFuse.js [options] mountPoint\n' +
+    '\n' +
+    'Options:\n' +
+    '-d                 : make FUSE print debug statements.\n' +
+    '-m                 : specify web storage module.\n' +
+    '-o                 : options for the module.\n' +
+    '\n' +
+    'Example:\n' +
+    'node udFuse.fs -d /tmp/mnt\n'
+  );
 }
 
 function parseArgs() {
@@ -238,14 +239,14 @@ function parseArgs() {
 
 (function main() {
   if (parseArgs()) {
-    console.log("\nMount point: " + options.mountPoint);
+    logger.info('Mount point: ' + options.mountPoint);
     if (options.debugFuse)
-      console.log("FUSE debugging enabled");
+      logger.info('FUSE debugging enabled');
     try {
       handlers.force = true;
       fuse.mount(options.mountPoint, handlers);
     } catch (e) {
-      console.log("Exception when starting file system: " + e);
+      logger.info('Exception when starting file system: ' + e);
     }
   } else {
     usage();

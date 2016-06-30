@@ -1,6 +1,7 @@
 var DataCache = {};
 var Settings = require('./Settings');
 var Path = require('path');
+var logger = require('./log');
 
 DataCache.init = function (blockSize) {
   this._IS_WEB = typeof document !== 'undefined' &&
@@ -68,10 +69,10 @@ DataCache.writeCache = function (task, data, cb){
   var self = this;
   this._dataStore.writeEntry(task.md5sum, data, function(err) {
     if(err) {
-      console.log(err);
+      logger.error('writeCache: ' + JSON.stringify(err));
     } else {
       self.updateStatus(task.md5sum, 'DONE');
-      console.log('The file was saved!');
+      logger.verbose('The file was saved!');
     }
     cb();
   });
@@ -100,12 +101,14 @@ DataCache.readCache = function (path, buffer, offset, size, requestList, cb){
 
       cursor_moved += writeSize ;
     } else {
-      console.error('======= Critical Error =======');
-      console.error(path);
-      console.error(offset);
-      console.error(size);
-      console.error(requestList);
-      console.error(this._fileDataCache);
+      logger.error(JSON.stringify({
+        msg: '======= Critical Error =======',
+        path: path,
+        offset: offset,
+        size: size,
+        requestList: requestList,
+        fileDataCache: this._fileDataCache
+      }));
 
       throw Error('data is not finished.');
     }

@@ -1,4 +1,5 @@
 var Settings = require('../helper/Settings');
+var logger = require('../helper/log');
 const EventEmitter = require('events');
 const util = require('util');
 
@@ -72,7 +73,7 @@ Dropbox.prototype.registerChange = function (){
   getLatestCursor(function (error, response) {
     latestCursor = response.data.cursor;
     repeat(function (error, response) {
-      console.log(response);
+      logger.verbose(response);
       if (response.entries && response.entries.length === 0) {
         return;
       }

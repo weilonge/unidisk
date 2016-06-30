@@ -1,5 +1,6 @@
 var fs = require('fs');
 var Settings = require('./Settings');
+var logger = require('./log');
 
 var DiskDataStore = {};
 
@@ -28,7 +29,7 @@ DiskDataStore.deleteEntry = function (key){
   var fileName = this._CACHE_PATH + '/' + key;
   fs.unlink(fileName, function (err){
     if (err) throw err;
-    console.log('successfully deleted ' + fileName);
+    logger.verbose('successfully deleted ' + fileName);
   });
 };
 

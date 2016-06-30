@@ -1,6 +1,7 @@
 var EventEmitter = require('events').EventEmitter;
 var foco = require('foco');
 var Settings = require('./Settings');
+var logger = require('./log');
 
 var UD_BLOCK_SIZE = Settings.get('block_size');
 var UD_QUEUE_CONCURRENCY = Settings.get('queue_concurrency');
@@ -21,11 +22,11 @@ udManager.prototype._isIllegalFileName = function (path) {
 };
 
 udManager.prototype.queueHandler = function (id, task, callback) {
-  console.log('  [B] ' + task.path + "|" + task.offset + '| downloading...');
+  logger.verbose('  [B] ' + task.path + '|' + task.offset + '| downloading...');
   var self = this;
   task.status = "DOWNLOADING";
   this.downloadFileInRange(task.path, task.offset, task.size, function(error, response){
-    console.log(task.path + "|" + task.offset + '| done!! ' + response.length);
+    logger.verbose(task.path + '|' + task.offset + '| done!! ' + response.length);
 
     // Write the buffer to the cache file.
     self.dataCache.writeCache(task, response.data, function(){
@@ -62,7 +63,7 @@ udManager.prototype.showStat = function (cb) {
     } else {
       self.webStorage.quota(function(error, response){
         if(error){
-          console.log("" + new Date () + "| " + error);
+          logger.error('showStat: ' + JSON.stringify(error));
           retry();
         }else{
           self.QuotaCache = response;
@@ -91,7 +92,7 @@ udManager.prototype.getFileMeta = function (path, cb) {
     }else{
       self.webStorage.getFileMeta(path, function(error, response){
         if(error){
-          console.log("" + new Date () + "| " + error);
+          logger.error('getFileMeta: ' + JSON.stringify(error));
           retry();
         }else{
           self.metaCache.update(path, response.data);
@@ -120,7 +121,7 @@ udManager.prototype.getFileList = function (path, cb) {
     }else{
       self.webStorage.getFileList(path, function(error, response){
         if(error){
-          console.log("" + new Date () + "| " + error);
+          logger.error('getFileList: ' + JSON.stringify(error));
           retry();
         }else{
           self.metaCache.updateList(path, response.data);
@@ -200,11 +201,11 @@ udManager.prototype._requestPushAndDownload = function (path, downloadRequest, c
   function checkRequest() {
     // Verify the download requests are all finished or not.
     if( self._isAllRequestDone(downloadRequest) ){
-      console.log('  [D] ' + 'All requests are done.');
+      logger.verbose('  [D] ' + 'All requests are done.');
       self.taskEvent.removeListener('done', checkRequest);
       cb();
     }else {
-      console.log("keep waiting for all requests done...");
+      logger.verbose('keep waiting for all requests done...');
     }
   }
   self.taskEvent.on('done', checkRequest);
@@ -213,7 +214,7 @@ udManager.prototype._requestPushAndDownload = function (path, downloadRequest, c
     var data = self.dataCache.get(taskMd5sum);
 
     if (data) {
-      //console.log('  [C1] ' + data.path + " is in cache: " + data.status + "| " + task.offset);
+      logger.verbose('  [C1] ' + data.path + ' is in cache: ' + data.status + '| ' + task.offset);
       self.FileDownloadQueue.priorityChange(taskMd5sum, 0);
       callback();
     } else if ( task.priority === "PREFETCH" ) {
@@ -231,8 +232,8 @@ udManager.prototype._requestPushAndDownload = function (path, downloadRequest, c
 };
 
 udManager.prototype.downloadFileInRangeByCache = function(path, buffer, offset, size, cb) {
-  console.log('{{');
-  console.log('  [A] ' + path + ' ' + offset + ' ' + size);
+  logger.verbose('{{');
+  logger.verbose('  [A] ' + path + ' ' + offset + ' ' + size);
   var self = this;
   self.getFileMeta(path, function(error, response){
     const totalSize = response.data.list[0].size;
@@ -244,8 +245,8 @@ udManager.prototype.downloadFileInRangeByCache = function(path, buffer, offset, 
       // 3. All requests are done. Aggregate all data.
       // Read the request data from files.
       self.dataCache.readCache(path, buffer, offset, size, requestList, function(){
-        console.log('  [E] data is prepared.');
-        console.log('}}');
+        logger.verbose('  [E] data is prepared.');
+        logger.verbose('}}');
         cb(null);
       });
     });
@@ -257,13 +258,13 @@ udManager.prototype.downloadFileInRange = function(path, offset, size, cb) {
   var retry = function () {
     self.webStorage.getFileDownload(path, offset, size, function(error, response){
       if(error){
-        console.log('[ERROR] retry, error happened: ' + error);
+        logger.error('retry, error happened: ' + JSON.stringify(error));
         setTimeout(retry , 800);
       }else if( !response || !response.data || !response.length){
-        console.log('[ERROR] retry, error response: ' + response);
+        logger.error('retry, error response: ' + JSON.stringify(response));
         setTimeout(retry , 800);
       }else if( size != response.length ){
-        console.log('[ERROR] retry, size error: ' + offset + " " + size + " " + response.length);
+        logger.error('retry, size error: ' + offset + ' ' + size + ' ' + response.length);
         setTimeout(retry , 800);
       }else{
         cb(error, response);
@@ -287,7 +288,7 @@ udManager.prototype.downloadFileInMultiRange = function(path, list, cb) {
   }
   foco.each(listArray, function(index, item, callback){
     self.downloadFileInRange(path, item.offset, item.size, function(error, response){
-      console.log(response.data);
+      logger.verbose(response.data);
       callback();
     });
   }, function(){

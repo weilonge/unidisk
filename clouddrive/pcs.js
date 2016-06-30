@@ -1,5 +1,6 @@
 var unirest = require('unirest');
 var Settings = require('../helper/Settings');
+var logger = require('../helper/log');
 const EventEmitter = require('events');
 const util = require('util');
 
@@ -66,7 +67,7 @@ pcs.prototype._execute = function (options, cb){
     };
     if (httpResponse.error && httpResponse.error.code) {
       errorOutput = httpResponse.error;
-      console.log({
+      logger.error({
         code: httpResponse.code,
         status: httpResponse.status,
         error: httpResponse.error,
@@ -74,7 +75,7 @@ pcs.prototype._execute = function (options, cb){
       });
     } else if(httpResponse.serverError){
       errorOutput = httpResponse.body;
-      console.log({
+      logger.error({
         code: httpResponse.code,
         status: httpResponse.status,
         statusType: httpResponse.statusType
@@ -85,7 +86,7 @@ pcs.prototype._execute = function (options, cb){
         if ( responseJson.error_code && responseJson.error_code !== 31066 ) { // file does not exist
           //{ error_code: 31326, error_msg: 'anti hotlinking' }
           errorOutput = responseJson;
-          console.log(errorOutput);
+          logger.error(errorOutput);
         } else {
           response.data = that._trimRootPath(responseJson);
         }
@@ -126,7 +127,7 @@ pcs.prototype._download = function (options, cb){
         response.data = httpResponse.raw_body;
         response.length = httpResponse.raw_body.length;
       } catch (e) {
-        console.log(e)
+        logger.error(e);
         errorOutput = httpResponse.body;
       }
     }
@@ -210,7 +211,7 @@ pcs.prototype._tokenRequest = function (link, cb){
     };
     if (httpResponse.serverError) {
       errorOutput = httpResponse.body;
-      console.log({
+      logger.error({
         code: httpResponse.code,
         status: httpResponse.status,
         statusType: httpResponse.statusType

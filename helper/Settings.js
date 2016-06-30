@@ -1,4 +1,5 @@
 var fs = require('fs');
+var logger = require('./log');
 
 var Settings = {};
 
@@ -17,7 +18,7 @@ Settings._loadNodeSettings = function (){
     var value = stats.isFile() ? fs.readFileSync( settingsFileName ) : {};
     this.table = JSON.parse(value);
   } catch (e) {
-    console.error('failed to load settings');
+    logger.error('failed to load settings');
     this.table = {};
   }
 };
