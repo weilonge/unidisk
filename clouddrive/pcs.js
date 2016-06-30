@@ -64,7 +64,15 @@ pcs.prototype._execute = function (options, cb){
 			uri: link,
 			data: null
 		};
-		if(httpResponse.serverError){
+		if (httpResponse.error && httpResponse.error.code) {
+			errorOutput = httpResponse.error;
+			console.log({
+				code: httpResponse.code,
+				status: httpResponse.status,
+				error: httpResponse.error,
+				statusType: httpResponse.statusType
+			});
+		} else if(httpResponse.serverError){
 			errorOutput = httpResponse.body;
 			console.log({
 				code: httpResponse.code,
