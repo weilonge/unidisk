@@ -115,9 +115,10 @@ pcs.prototype._download = function (options, cb){
       uri: link,
       data: null
     };
-    if(httpResponse.serverError){
+    if(httpResponse.error){
       errorOutput = {
         code: httpResponse.code,
+        error: httpResponse.error,
         status: httpResponse.status,
         statusType: httpResponse.statusType
       };
