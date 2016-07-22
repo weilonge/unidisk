@@ -24,6 +24,16 @@ pcs.prototype.init = function (){
   this.USERTOKEN = Settings.get('baidu_pcs_token');
 };
 
+pcs.prototype.isIllegalFileName = function (path) {
+  var list = path.split('/');
+  for(var i = 0; i < list.length; i++){
+    if( list[i].indexOf('.') === 0 ){
+      return true;
+    }
+  }
+  return false;
+};
+
 pcs.prototype._trimRootPath = function (fileMeta){
   if(fileMeta.list){
     for(var i in fileMeta.list){

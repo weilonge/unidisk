@@ -12,13 +12,7 @@ var udManager = function(){
 };
 
 udManager.prototype._isIllegalFileName = function (path) {
-  var list = path.split('/');
-  for(var i = 0; i < list.length; i++){
-    if( list[i].indexOf('.') === 0 ){
-      return true;
-    }
-  }
-  return false;
+  return this.webStorage.isIllegalFileName(path);
 };
 
 udManager.prototype.queueHandler = function (id, task, callback) {

@@ -21,6 +21,10 @@ Dropbox.prototype.init = function (options){
   this.registerChange();
 };
 
+Dropbox.prototype.isIllegalFileName = function (path) {
+  return path.indexOf('/._') !== -1;
+};
+
 Dropbox.prototype.registerChange = function (){
   var self = this;
   var latestCursor;
