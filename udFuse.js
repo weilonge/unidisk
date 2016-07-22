@@ -109,6 +109,7 @@ function read(path, fd, buf, len, offset, cb) {
       cb( err );
     }else if( response.data.list[0].isdir == 1 ){
       // directory
+      logger.error('read, is directory', path);
       err = fuse.EPERM;
       cb( err );
     }else{
@@ -121,8 +122,12 @@ function read(path, fd, buf, len, offset, cb) {
 
 function write(path, fd, buffer, length, position, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path + ' ' + position);
+  if (length !== 65536) {
+    logger.error('length !== 65536', length);
+  }
   udm.write(path, fd, buffer, position, length, function (error, response) {
     if (error) {
+      logger.error('write error:', error);
       cb(fuse.EPERM);
     } else {
       cb(response.data.length);
@@ -134,6 +139,7 @@ function release(path, fd, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path);
   udm.closeFile(path, fd, function (error, response) {
     if (error) {
+      logger.error('release error:', error);
       cb(fuse.EPERM);
     } else {
       cb(0);
@@ -215,6 +221,7 @@ function truncate(path, size, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path);
   logger.info(path, size);
   if (size !== 0) {
+    logger.error('truncate error: size !== 0');
     cb(fuse.EPERM);
   } else {
     cb(0);
@@ -388,6 +395,7 @@ function parseArgs() {
     if (options.writeable) {
       logger.info('Read-write File System mounted');
       handlers = rwHandlers;
+      handlers.options.push('daemon_timeout=1200');
     } else {
       logger.info('Read-only File System mounted');
       handlers = roHandlers;
