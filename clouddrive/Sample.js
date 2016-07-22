@@ -46,6 +46,10 @@ Sample.prototype.init = function (options){
   });
 };
 
+Sample.prototype.isIllegalFileName = function (path) {
+  return path.indexOf('/._') !== -1;
+};
+
 Sample.prototype._isObject = function (obj) {
   return typeof obj === 'object';
 };
