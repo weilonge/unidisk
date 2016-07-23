@@ -6,7 +6,9 @@ var logger = require('./log');
 var UD_BLOCK_READING_SIZE = Settings.get('block_reading_size');
 var UD_BLOCK_WRITING_SIZE = Settings.get('block_writing_size');
 var UD_QUEUE_CONCURRENCY = Settings.get('queue_concurrency');
+var UD_FUSE_IOSIZE = Settings.get('fuse_iosize');
 var UD_PREFETCH_SIZE = Settings.get('prefetch_blocks') * UD_BLOCK_READING_SIZE;
+const WRITING_BLOCK_NUM = UD_BLOCK_WRITING_SIZE / UD_FUSE_IOSIZE;
 
 var udManager = function(){
   this.taskEvent = new EventEmitter();
@@ -111,12 +113,12 @@ udManager.prototype.closeFile = function (path, fd, cb) {
   var list = this._openedFileList, self = this;
 
   function close() {
-    list[fd] = null;
     self.webStorage.commitFileData(path, fd, function (error, response) {
       if (!error && list[fd].flags !== 'r') {
         self.metaCache.clear('/', true);
         self.dataCache.clear('/', true);
       }
+      list[fd] = null;
       cb(error, response);
     });
   }
@@ -137,14 +139,6 @@ udManager.prototype.closeFile = function (path, fd, cb) {
   if (!list[fd] || list[fd].path !== path) {
     process.nextTick(function () {
       cb({error: 'No fd found'});
-    });
-    return;
-  }
-
-  if (list[fd].flags === 'r') {
-    process.nextTick(function () {
-      list[fd] = null;
-      cb(null, null);
     });
     return;
   }
@@ -389,7 +383,7 @@ udManager.prototype.write = function (path, fd, buffer, offset, length, cb) {
   }
 
   var expectedOffset = list[fd].uploadedChunk * UD_BLOCK_WRITING_SIZE +
-                       list[fd].writingBlocks.length * 65536;
+                       list[fd].writingBlocks.length * UD_FUSE_IOSIZE;
   if (expectedOffset !== offset) {
     process.nextTick(function () {
       logger.error('incorrect offset', expectedOffset, offset, length);
@@ -410,7 +404,6 @@ udManager.prototype.write = function (path, fd, buffer, offset, length, cb) {
     length: length
   });
 
-  const WRITING_BLOCK_NUM = UD_BLOCK_WRITING_SIZE / 65536;
   if (WRITING_BLOCK_NUM === list[fd].writingBlocks.length) {
     var new_length = 0, new_offset = 0, new_buffer;
     for (var i in list[fd].writingBlocks) {

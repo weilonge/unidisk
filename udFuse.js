@@ -3,6 +3,8 @@ var fuse = require('fuse-bindings');
 var options = {};  // See parseArgs()
 var udManager = require('./helper/udManager');
 var logger = require('./helper/log');
+var Settings = require('./helper/Settings');
+var FUSE_IOSIZE = Settings.get('fuse_iosize');
 require('./helper/ObjectExtend');
 
 var udm;
@@ -91,6 +93,7 @@ function open(path, flags, cb) {
       udm.openFile(path, f, function (error, response) {
         if (error) {
           logger.error('open, openFile:', path, flags);
+          logger.error('open, openFile:', error);
           cb(fuse.EPERM);
         } else {
           cb(error, response.fd);
@@ -101,7 +104,7 @@ function open(path, flags, cb) {
 }
 
 function read(path, fd, buf, len, offset, cb) {
-  logger.info('[' + __function + ',' + __line + '] ' + path);
+  logger.info('[' + __function + ',' + __line + '] ' + path + ' ' + len);
   udm.getFileMeta(path, function (error, response){
     var err = 0; // assume success
     if( !response.data || !response.data.list){
@@ -121,9 +124,9 @@ function read(path, fd, buf, len, offset, cb) {
 }
 
 function write(path, fd, buffer, length, position, cb) {
-  logger.info('[' + __function + ',' + __line + '] ' + path + ' ' + position);
-  if (length !== 65536) {
-    logger.error('length !== 65536', length);
+  logger.info('[' + __function + ',' + __line + '] ' + path + ' ' + position + ' ' + length);
+  if (length !== FUSE_IOSIZE) {
+    logger.error('length !== ' + FUSE_IOSIZE, length);
   }
   udm.write(path, fd, buffer, position, length, function (error, response) {
     if (error) {
@@ -136,7 +139,7 @@ function write(path, fd, buffer, length, position, cb) {
 }
 
 function release(path, fd, cb) {
-  logger.info('[' + __function + ',' + __line + '] ' + path);
+  logger.info('[' + __function + ',' + __line + '] ' + path + ' ' + fd);
   udm.closeFile(path, fd, function (error, response) {
     if (error) {
       logger.error('release error:', error);
@@ -404,6 +407,7 @@ function parseArgs() {
       logger.info('FUSE debugging enabled');
       handlers.options.push('debug');
     }
+    handlers.options.push('iosize=' + FUSE_IOSIZE);
     try {
       handlers.force = true;
       fuse.mount(options.mountPoint, handlers);
