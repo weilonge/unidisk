@@ -3,9 +3,12 @@ var foco = require('foco');
 var Settings = require('./Settings');
 var logger = require('./log');
 
-var UD_BLOCK_SIZE = Settings.get('block_size');
+var UD_BLOCK_READING_SIZE = Settings.get('block_reading_size');
+var UD_BLOCK_WRITING_SIZE = Settings.get('block_writing_size');
 var UD_QUEUE_CONCURRENCY = Settings.get('queue_concurrency');
-var UD_PREFETCH_SIZE = Settings.get('prefetch_blocks') * UD_BLOCK_SIZE;
+var UD_FUSE_IOSIZE = Settings.get('fuse_iosize');
+var UD_PREFETCH_SIZE = Settings.get('prefetch_blocks') * UD_BLOCK_READING_SIZE;
+const WRITING_BLOCK_NUM = UD_BLOCK_WRITING_SIZE / UD_FUSE_IOSIZE;
 
 var udManager = function(){
   this.taskEvent = new EventEmitter();
@@ -44,7 +47,7 @@ udManager.prototype.init = function(options){
     self.dataCache.clear(evt.path, evt.recursive);
   });
   this.metaCache.init();
-  this.dataCache.init(UD_BLOCK_SIZE);
+  this.dataCache.init(UD_BLOCK_READING_SIZE);
   this.FileDownloadQueue = foco.priorityQueue(
     this.queueHandler.bind(this), UD_QUEUE_CONCURRENCY);
 };
@@ -96,6 +99,8 @@ udManager.prototype.openFile = function (path, flags, cb) {
   } else {
     this._openedFileList[i] = {
       path: path,
+      uploadedChunk: 0,
+      writingBlocks: [],
       flags: flags
     };
     this.webStorage.openFile(path, flags, i, function (error, response) {
@@ -106,17 +111,29 @@ udManager.prototype.openFile = function (path, flags, cb) {
 
 udManager.prototype.closeFile = function (path, fd, cb) {
   var list = this._openedFileList, self = this;
-  if (list[fd] && list[fd].path === path) {
-    list[fd] = null;
-    this.webStorage.commitFileData(path, fd, function (error, response) {
+
+  function close() {
+    self.webStorage.commitFileData(path, fd, function (error, response) {
       if (!error && list[fd].flags !== 'r') {
         self.metaCache.clear('/', true);
         self.dataCache.clear('/', true);
       }
+      list[fd] = null;
       cb(error, response);
     });
+  }
+
+  if (!list[fd] || list[fd].path !== path) {
+    process.nextTick(function () {
+      cb({error: 'No fd found'});
+    });
+    return;
+  }
+
+  if (list[fd].writingBlocks.length > 0) {
+    this.writeCurrentBuffer(path, fd, close);
   } else {
-    cb({error: 'No fd found'});
+    close();
   }
 };
 
@@ -182,8 +199,8 @@ udManager.prototype._generateRequestList = function(fileMeta, offset, size, file
   const endPos = offset + size;
   var requestList = [];
 
-  var alignedOffset = Math.floor( offset / UD_BLOCK_SIZE) * UD_BLOCK_SIZE;
-  for(; alignedOffset < endPos && alignedOffset < fileSize; alignedOffset += UD_BLOCK_SIZE ){
+  var alignedOffset = Math.floor( offset / UD_BLOCK_READING_SIZE) * UD_BLOCK_READING_SIZE;
+  for(; alignedOffset < endPos && alignedOffset < fileSize; alignedOffset += UD_BLOCK_READING_SIZE ){
     var task = {
       path: fileMeta.path,
       totalSize: fileMeta.size,
@@ -192,7 +209,7 @@ udManager.prototype._generateRequestList = function(fileMeta, offset, size, file
       priority: "HIGH",
       md5sum: "",
       offset: alignedOffset,
-      size: ((alignedOffset + UD_BLOCK_SIZE) > fileSize ? (fileSize - alignedOffset) : UD_BLOCK_SIZE )
+      size: ((alignedOffset + UD_BLOCK_READING_SIZE) > fileSize ? (fileSize - alignedOffset) : UD_BLOCK_READING_SIZE )
     };
     var taskMd5sum = this.dataCache.generateKey(task);
     task.md5sum = taskMd5sum;
@@ -201,7 +218,7 @@ udManager.prototype._generateRequestList = function(fileMeta, offset, size, file
   }
 
   const prefetchEndPos = endPos + UD_PREFETCH_SIZE;
-  for(; alignedOffset < prefetchEndPos && alignedOffset < fileSize; alignedOffset += UD_BLOCK_SIZE ){
+  for(; alignedOffset < prefetchEndPos && alignedOffset < fileSize; alignedOffset += UD_BLOCK_READING_SIZE ){
     var prefetchTask = {
       path: fileMeta.path,
       totalSize: fileMeta.size,
@@ -210,7 +227,7 @@ udManager.prototype._generateRequestList = function(fileMeta, offset, size, file
       priority: "PREFETCH",
       md5sum: "",
       offset: alignedOffset,
-      size: ((alignedOffset + UD_BLOCK_SIZE) > fileSize ? (fileSize - alignedOffset) : UD_BLOCK_SIZE )
+      size: ((alignedOffset + UD_BLOCK_READING_SIZE) > fileSize ? (fileSize - alignedOffset) : UD_BLOCK_READING_SIZE )
     };
     var prefetchTaskMd5sum = this.dataCache.generateKey(prefetchTask);
     prefetchTask.md5sum = prefetchTaskMd5sum;
@@ -343,12 +360,76 @@ udManager.prototype.downloadFileInMultiRange = function(path, list, cb) {
   });
 };
 
+udManager.prototype.writeDirect = function (path, fd, buffer, offset, length, cb) {
+  this.webStorage.writeFileData(path, fd, buffer, offset, length, cb);
+};
+
+udManager.prototype.writeCurrentBuffer = function (path, fd, cb) {
+  var list = this._openedFileList,
+      new_length = 0,
+      new_offset = 0,
+      new_buffer;
+  for (var i in list[fd].writingBlocks) {
+    new_length += list[fd].writingBlocks[i].length;
+  }
+  new_offset = list[fd].writingBlocks[0].offset;
+  new_buffer = Buffer.concat(list[fd].writingBlocks.map(function (item) {
+    return item.buffer;
+  }));
+
+  this.writeDirect(path, fd, new_buffer, new_offset, new_length, cb);
+};
+
 udManager.prototype.write = function (path, fd, buffer, offset, length, cb) {
-  var self = this;
-  this.webStorage.writeFileData(path, fd, buffer, offset, length,
-    function (error, response) {
-    cb(error, response);
+  var list = this._openedFileList, self = this;
+  if (!list[fd] || list[fd].path !== path) {
+    process.nextTick(function () {
+      cb({error:'File is not opened yet.'});
+    });
+    return;
+  }
+
+  var expectedOffset = list[fd].uploadedChunk * UD_BLOCK_WRITING_SIZE +
+                       list[fd].writingBlocks.length * UD_FUSE_IOSIZE;
+  if (expectedOffset !== offset) {
+    process.nextTick(function () {
+      logger.error('incorrect offset', expectedOffset, offset, length);
+      cb(null, {
+        data: {
+          length: length
+        }
+      });
+    });
+    return;
+  }
+
+  list[fd].writingBlocks.push({
+    path: path,
+    fd: fd,
+    buffer: new Buffer(buffer),
+    offset: offset,
+    length: length
   });
+
+  if (WRITING_BLOCK_NUM === list[fd].writingBlocks.length) {
+    this.writeCurrentBuffer(path, fd, function (error, response) {
+      list[fd].writingBlocks = [];
+      list[fd].uploadedChunk++;
+      cb(error, {
+        data: {
+          length: length
+        }
+      });
+    })
+  } else {
+    process.nextTick(function () {
+      cb(null, {
+        data: {
+          length: length
+        }
+      });
+    });
+  }
 };
 
 udManager.prototype.deleteFile = function (path, cb) {

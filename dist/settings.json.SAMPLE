@@ -1,5 +1,7 @@
 {
-  "block_size": 1048576,
+  "block_reading_size": 1048576,
+  "block_writing_size": 8388608,
+  "fuse_iosize": 65536,
   "queue_concurrency": 3,
   "prefetch_blocks": 10,
   "max_data_cache_entry": 25,

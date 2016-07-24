@@ -307,8 +307,20 @@ Dropbox.prototype.writeFileData = function (path, fd, buffer, offset, length, cb
 
 Dropbox.prototype.commitFileData = function (path, fd, cb){
   var pendingData = this._writePendingData, self = this;
+
   if (!pendingData[fd]) {
-    cb({error: 'File is not opened yet.'});
+    process.nextTick(function () {
+      cb({error: 'File is not opened yet:' + path + ' ' + fd});
+    });
+    return;
+  }
+
+  if (pendingData[fd].blocks.length === 0) {
+    process.nextTick(function () {
+      logger.info('commitFileData with no blocks');
+      pendingData[fd] = null;
+      cb(null, null);
+    });
     return;
   }
 
