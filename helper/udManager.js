@@ -123,19 +123,6 @@ udManager.prototype.closeFile = function (path, fd, cb) {
     });
   }
 
-  function writeBuffer(callback) {
-    var new_length = 0, new_offset = 0, new_buffer;
-    for (var i in list[fd].writingBlocks) {
-      new_length += list[fd].writingBlocks[i].length;
-    }
-    new_offset = list[fd].writingBlocks[0].offset;
-    new_buffer = Buffer.concat(list[fd].writingBlocks.map(function (item) {
-      return item.buffer;
-    }));
-
-    self.webStorage.writeFileData(path, fd, new_buffer, new_offset, new_length, callback);
-  }
-
   if (!list[fd] || list[fd].path !== path) {
     process.nextTick(function () {
       cb({error: 'No fd found'});
@@ -144,7 +131,7 @@ udManager.prototype.closeFile = function (path, fd, cb) {
   }
 
   if (list[fd].writingBlocks.length > 0) {
-    writeBuffer(close);
+    this.writeCurrentBuffer(path, fd, close);
   } else {
     close();
   }
@@ -373,6 +360,26 @@ udManager.prototype.downloadFileInMultiRange = function(path, list, cb) {
   });
 };
 
+udManager.prototype.writeDirect = function (path, fd, buffer, offset, length, cb) {
+  this.webStorage.writeFileData(path, fd, buffer, offset, length, cb);
+};
+
+udManager.prototype.writeCurrentBuffer = function (path, fd, cb) {
+  var list = this._openedFileList,
+      new_length = 0,
+      new_offset = 0,
+      new_buffer;
+  for (var i in list[fd].writingBlocks) {
+    new_length += list[fd].writingBlocks[i].length;
+  }
+  new_offset = list[fd].writingBlocks[0].offset;
+  new_buffer = Buffer.concat(list[fd].writingBlocks.map(function (item) {
+    return item.buffer;
+  }));
+
+  this.writeDirect(path, fd, new_buffer, new_offset, new_length, cb);
+};
+
 udManager.prototype.write = function (path, fd, buffer, offset, length, cb) {
   var list = this._openedFileList, self = this;
   if (!list[fd] || list[fd].path !== path) {
@@ -405,17 +412,7 @@ udManager.prototype.write = function (path, fd, buffer, offset, length, cb) {
   });
 
   if (WRITING_BLOCK_NUM === list[fd].writingBlocks.length) {
-    var new_length = 0, new_offset = 0, new_buffer;
-    for (var i in list[fd].writingBlocks) {
-      new_length += list[fd].writingBlocks[i].length;
-    }
-    new_offset = list[fd].writingBlocks[0].offset;
-    new_buffer = Buffer.concat(list[fd].writingBlocks.map(function (item) {
-      return item.buffer;
-    }));
-
-    this.webStorage.writeFileData(path, fd, new_buffer, new_offset, new_length,
-      function (error, response) {
+    this.writeCurrentBuffer(path, fd, function (error, response) {
       list[fd].writingBlocks = [];
       list[fd].uploadedChunk++;
       cb(error, {
@@ -423,7 +420,7 @@ udManager.prototype.write = function (path, fd, buffer, offset, length, cb) {
           length: length
         }
       });
-    });
+    })
   } else {
     process.nextTick(function () {
       cb(null, {
