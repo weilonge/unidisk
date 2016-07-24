@@ -5,7 +5,7 @@
 
 var udUtility = require('./helper/cmdWrapper');
 var path = require('path');
-var logger = require('./log');
+var logger = require('./helper/log');
 
 function showHelp(exeName){
   console.log(
@@ -21,7 +21,7 @@ var cccb = function(error, response){
   if( error ){
     logger.error(error);
   }else{
-    logger.log(response.data);
+    console.log(response.data);
   }
 }
 

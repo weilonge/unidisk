@@ -1,6 +1,8 @@
 const EventEmitter = require('events');
 const util = require('util');
 const fs = require('fs');
+const pathUtil = require('path');
+const logger = require('../helper/log');
 
 var Sample = function (){
   EventEmitter.call(this);
@@ -29,6 +31,8 @@ Sample.prototype.init = function (options){
   } else {
     this._TEST_DATA = require(jsonFileName);
   }
+
+  this._writePendingData = {};
 
   fs.watchFile(jsonFileName, function (curr, prev) {
     self.emit('fileChange', {
@@ -72,7 +76,7 @@ Sample.prototype._findMeta = function (path) {
 
 Sample.prototype._getMeta = function (path) {
   var meta = this._findMeta(path);
-  if (meta) {
+  if (meta || typeof meta === 'string') {
     if (typeof meta === 'string') {
       var length = this._IS_WEB ? meta.length * 2 : meta.length; // for UTF-16
       return {
@@ -156,6 +160,89 @@ Sample.prototype.getFileList = function (path, cb){
     }});
   } else {
     cb(null, null);
+  }
+};
+
+Sample.prototype.openFile = function (path, flags, fd, cb) {
+  var pendingData = this._writePendingData;
+  if (pendingData[fd]) {
+    cb({error:'File is opened'});
+  } else {
+    pendingData[fd] = {
+      path: path,
+      flags: flags,
+      blocks: []
+    };
+    cb(null, null);
+  }
+};
+
+Sample.prototype.createEmptyFile = function (path, cb){
+  if (this._findMeta(path)) {
+    cb({ error: 'File exists already.' }, null);
+  } else {
+    var folders = path.split('/');
+    folders.shift();
+    var current = this._TEST_DATA;
+    for (var i = 0; i < folders.length - 1; i++) {
+      current = current[folders[i]];
+    }
+    current[folders[folders.length - 1]] = '';
+    cb(null, null);
+  }
+};
+
+Sample.prototype.writeFileData = function (path, fd, buffer, offset, length, cb){
+  var pendingData = this._writePendingData, error;
+  if (pendingData[fd] && pendingData[fd].path === path) {
+    if (pendingData[fd].blocks.length === 0) {
+      if (offset !== 0) {
+        logger.error('Write operation does not start at offset 0.');
+        error = 'Write operation does not start at offset 0.';
+      }
+    } else {
+      var blocks = pendingData[fd].blocks;
+      var lastBlock = blocks[blocks.length - 1];
+      if ((lastBlock.offset + lastBlock.length) !== offset) {
+        logger.error('Non-sequential write operation.');
+        error = 'Non-sequential write operation.';
+      }
+    }
+
+    if (error) {
+      cb({error: error});
+    } else {
+      pendingData[fd].blocks.push({
+        offset: offset,
+        length: length,
+        buffer: buffer.toString('binary')
+      });
+      cb(null, {
+        data: {length: length}
+      });
+    }
+  } else {
+    cb({error:'Incorrect fd and path'});
+  }
+};
+
+Sample.prototype.commitFileData = function (path, fd, cb){
+  var pendingData = this._writePendingData, currentIndex = 0;
+  if (pendingData[fd] && pendingData[fd].path === path) {
+    var baseName = pathUtil.basename(path);
+    var dirName = this._findMeta(pathUtil.dirname(path));
+    for (var i in pendingData[fd].blocks) {
+      if (pendingData[fd].blocks[i].offset === currentIndex) {
+        dirName[baseName] += pendingData[fd].blocks[i].buffer;
+        currentIndex = pendingData[fd].blocks[i].offset + pendingData[fd].blocks[i].length;
+      } else {
+        logger.error('Incorrect offset while writing file.');
+      }
+    }
+    pendingData[fd] = null;
+    cb(null, null);
+  } else {
+    cb({error:'Unable to close a non-opened file.'});
   }
 };
 

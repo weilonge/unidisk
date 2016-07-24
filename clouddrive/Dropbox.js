@@ -13,6 +13,8 @@ Dropbox.prototype.init = function (options){
     typeof window !== 'undefined';
   this.XHR = this._IS_WEB ? window.XMLHttpRequest : require('xhr2');
 
+  this._writePendingData = {};
+
   if (options.token) {
     this.USERTOKEN = options.token;
   } else {
@@ -226,6 +228,183 @@ Dropbox.prototype.getFileDownload = function (path, offset, size, cb){
   };
 
   xmlhttp.send();
+};
+
+Dropbox.prototype.openFile = function (path, flags, fd, cb) {
+  var pendingData = this._writePendingData;
+  if (pendingData[fd]) {
+    cb({error:'File is opened'});
+  } else {
+    pendingData[fd] = {
+      path: path,
+      flags: flags,
+      blocks: []
+    };
+    cb(null, null);
+  }
+};
+
+Dropbox.prototype.createEmptyFile = function (path, cb){
+  var self = this;
+  var xmlhttp = new this.XHR();
+  xmlhttp.open('put', 'https://content.dropboxapi.com/1/files_put/auto' + encodeURIComponent(path), true);
+  xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+  xmlhttp.setRequestHeader('Content-Length', 0);
+  xmlhttp.onload = function () {
+    self._handleJson(xmlhttp, function (error, response){
+      if (response.data) {
+        var data = response.data;
+        var result = {
+          data: data
+        };
+        cb(error, result);
+      } else {
+        cb(error, response);
+      }
+    });
+  };
+
+  xmlhttp.send();
+};
+
+Dropbox.prototype.writeFileData = function (path, fd, buffer, offset, length, cb){
+  var self = this;
+  var pendingData = this._writePendingData;
+  if (!pendingData[fd]) {
+    cb({error: 'File is not opened yet.'});
+    return;
+  }
+
+  var currentFile = pendingData[fd], upload_id, requestParam = '';
+  var xmlhttp = new this.XHR();
+
+  if (currentFile.blocks.length > 0) {
+    upload_id = currentFile.blocks[currentFile.blocks.length -1];
+    requestParam += '?' + 'upload_id=' + upload_id;
+    requestParam += '&' + 'offset=' + offset;
+  }
+  var url = 'https://content.dropboxapi.com/1/chunked_upload' + requestParam;
+  xmlhttp.open('put', url, true);
+  xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+  xmlhttp.onload = function () {
+    self._handleJson(xmlhttp, function (error, response){
+      if (response.data) {
+        var data = response.data;
+        currentFile.blocks.push(data.upload_id);
+        data.length = length;
+        var result = {
+          data: data
+        };
+        cb(error, result);
+      } else {
+        cb(error, response);
+      }
+    });
+  };
+
+  xmlhttp.send(buffer);
+};
+
+Dropbox.prototype.commitFileData = function (path, fd, cb){
+  var pendingData = this._writePendingData, self = this;
+  if (!pendingData[fd]) {
+    cb({error: 'File is not opened yet.'});
+    return;
+  }
+
+  var currentFile = pendingData[fd], upload_id, requestParam = '';
+
+  var strParams = 'upload_id=' + encodeURIComponent(currentFile.blocks[currentFile.blocks.length -1])
+                + '&autorename=false';
+  var xmlhttp = new this.XHR();
+  xmlhttp.open('post', 'https://content.dropboxapi.com/1/commit_chunked_upload/auto' + encodeURIComponent(path), true);
+  xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+  xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  xmlhttp.onload = function (){
+    self._handleJson(xmlhttp, function (error, response){
+      if (response.data) {
+        var data = response.data;
+        pendingData[fd] = null;
+        cb(error, response);
+      } else {
+        pendingData[fd] = null;
+        cb(error, response);
+      }
+    });
+  };
+  xmlhttp.send(strParams);
+};
+
+Dropbox.prototype.deleteFile = function (path, cb){
+  var self = this;
+  var strParams = 'path=' + encodeURIComponent(path)
+                + '&root=auto';
+  var xmlhttp = new this.XHR();
+  xmlhttp.open('post', 'https://api.dropboxapi.com/1/fileops/delete', true);
+  xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+  xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  xmlhttp.onload = function (){
+    self._handleJson(xmlhttp, function (error, response){
+      if (response.data) {
+        var data = response.data;
+        cb(error, response);
+      } else {
+        cb(error, response);
+      }
+    });
+  };
+  xmlhttp.send(strParams);
+};
+
+Dropbox.prototype.deleteFolder = function (path, cb){
+  this.deleteFile(path, cb);
+};
+
+Dropbox.prototype.createFolder = function (path, cb){
+  var self = this;
+  var strParams = 'path=' + encodeURIComponent(path)
+                + '&root=auto';
+  var xmlhttp = new this.XHR();
+  xmlhttp.open('post', 'https://api.dropboxapi.com/1/fileops/create_folder', true);
+  xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+  xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  xmlhttp.onload = function (){
+    self._handleJson(xmlhttp, function (error, response){
+      if (response.data) {
+        var data = response.data;
+        cb(error, response);
+      } else {
+        cb(error, response);
+      }
+    });
+  };
+  xmlhttp.send(strParams);
+};
+
+Dropbox.prototype.move = function (src, dst, cb){
+  var self = this;
+  var strParams = 'from_path=' + encodeURIComponent(src)
+                + '&to_path=' + encodeURIComponent(dst)
+                + '&root=auto';
+  var xmlhttp = new this.XHR();
+  xmlhttp.open('post', 'https://api.dropboxapi.com/1/fileops/move', true);
+  xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+  xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  xmlhttp.onload = function (){
+    self._handleJson(xmlhttp, function (error, response){
+      if (xmlhttp.status === 404) {
+        cb({
+          error: 'The source file wasn\'t found at the specified path.'
+        }, response);
+      } else if (response.data) {
+        var data = response.data;
+        cb(error, response);
+      } else {
+        cb(error, response);
+      }
+    });
+  };
+  xmlhttp.send(strParams);
 };
 
 /*

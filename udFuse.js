@@ -5,9 +5,6 @@ var udManager = require('./helper/udManager');
 var logger = require('./helper/log');
 require('./helper/ObjectExtend');
 
-const EPERM = -1;
-const ENOENT = -2;
-
 var udm;
 
 function getattr(path, cb) {
@@ -16,10 +13,10 @@ function getattr(path, cb) {
     var stat = {};
     var err = 0; // assume success
     if( !response.data || !response.data.list){
-      err = ENOENT; // -ENOENT
+      err = fuse.ENOENT;
     }else if( response.data.list[0].isdir == 1 ){
       stat.size = 4096;   // standard size of a directory
-      stat.mode = 040550; // directory with 777 permissions
+      stat.mode = 040770; // directory with 770 permissions
       stat.mtime = new Date(response.data.list[0].mtime);
       stat.atime = new Date(response.data.list[0].mtime);
       stat.ctime = new Date(response.data.list[0].ctime);
@@ -27,7 +24,7 @@ function getattr(path, cb) {
       stat.gid = process.getgid();
     }else{
       stat.size = response.data.list[0].size;
-      stat.mode = 0100440; // file with 666 permissions
+      stat.mode = 0100660; // file with 660 permissions
       stat.mtime = new Date(response.data.list[0].mtime);
       stat.atime = new Date(response.data.list[0].mtime);
       stat.ctime = new Date(response.data.list[0].ctime);
@@ -44,7 +41,7 @@ function readdir(path, cb) {
     var names = [];
     var err = 0; // assume success
     if( !response.data ){
-      err = ENOENT; // -ENOENT
+      err = fuse.ENOENT;
     }else{
       for(var fp in response.data.list){
         var filePathSplited = response.data.list[fp].path.split('/');
@@ -56,17 +53,50 @@ function readdir(path, cb) {
   });
 }
 
+var toFlag = function(flags) {
+  flags = flags & 3
+  if (flags === 0) return 'r'
+  if (flags === 1) return 'w'
+  return 'r+'
+}
+
 function open(path, flags, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path);
   udm.getFileMeta(path, function (error, response){
+    var f = toFlag(flags);
     var stat = {};
+    var fd = 0;
     var err = 0; // assume success
-    if( !response.data || !response.data.list){
-      err = ENOENT; // -ENOENT
-    }else if( response.data.list[0].isdir == 1 ){
-    }else{
+    if (f === 'r') {
+      if( !response.data || !response.data.list){
+        err = fuse.ENOENT;
+      }else if( response.data.list[0].isdir === 1 ){
+        err = fuse.EISDIR;
+      }
+    } else if (f === 'r+') {
+      if( !response.data || !response.data.list){
+        err = fuse.ENOENT;
+      }else if( response.data.list[0].isdir === 1 ){
+        err = fuse.EISDIR;
+      }
+    } else if (f === 'w') {
+      //err = fuse.EPERM;
+    } else {
+      logger.error('Unkown flags:', flags, path);
+      err = fuse.EPERM;
     }
-    cb(err); // we don't return a file handle, so fuse4js will initialize it to 0
+    if (err) {
+      cb(err);
+    } else {
+      udm.openFile(path, f, function (error, response) {
+        if (error) {
+          logger.error('open, openFile:', path, flags);
+          cb(fuse.EPERM);
+        } else {
+          cb(error, response.fd);
+        }
+      });
+    }
   });
 }
 
@@ -75,11 +105,11 @@ function read(path, fd, buf, len, offset, cb) {
   udm.getFileMeta(path, function (error, response){
     var err = 0; // assume success
     if( !response.data || !response.data.list){
-      err = ENOENT; // -ENOENT
+      err = fuse.ENOENT;
       cb( err );
     }else if( response.data.list[0].isdir == 1 ){
       // directory
-      err = EPERM; // -EPERM
+      err = fuse.EPERM;
       cb( err );
     }else{
       udm.downloadFileInRangeByCache(path, buf, offset, len, function(error){
@@ -89,39 +119,124 @@ function read(path, fd, buf, len, offset, cb) {
   });
 }
 
-function write(path, offset, len, buf, fh, cb) {
-  logger.info('[' + __function + ',' + __line + '] ' + path);
-  cb(EPERM);
+function write(path, fd, buffer, length, position, cb) {
+  logger.info('[' + __function + ',' + __line + '] ' + path + ' ' + position);
+  udm.write(path, fd, buffer, position, length, function (error, response) {
+    if (error) {
+      cb(fuse.EPERM);
+    } else {
+      cb(response.data.length);
+    }
+  });
 }
 
-function release(path, fh, cb) {
+function release(path, fd, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path);
-  cb(0);
+  udm.closeFile(path, fd, function (error, response) {
+    if (error) {
+      cb(fuse.EPERM);
+    } else {
+      cb(0);
+    }
+  });
 }
 
 function create (path, mode, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path);
-  cb(EPERM);
+  var f = toFlag(mode);
+  var fd;
+  udm.openFile(path, f, function (error, response) {
+    if (error) {
+      logger.error('open error:', error);
+      cb(fuse.EPERM);
+    } else {
+      fd = response.fd;
+      udm.createEmptyFile(path, function (error, response) {
+        if (error) {
+          logger.error('create error:', error);
+          cb(fuse.EPERM);
+        } else {
+          cb(0, fd);
+        }
+      });
+    }
+  });
 }
 
 function unlink(path, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path);
-  cb(EPERM);
+  udm.deleteFile(path, function (error, response) {
+    if (error) {
+      logger.error(error);
+      cb(fuse.ENOENT);
+    } else {
+      cb(0);
+    }
+  });
 }
 
 function rename(src, dst, cb) {
-  logger.info('[' + __function + ',' + __line + '] ' + path);
-  cb(EPERM);
+  logger.info('[' + __function + ',' + __line + '] ' + src + ' ' + dst);
+  udm.move(src, dst, function (error, response) {
+    if (error) {
+      logger.error(error);
+      cb(fuse.ENOENT);
+    } else {
+      cb(0);
+    }
+  });
 }
 
 function mkdir(path, mode, cb) {
-  logger.info('[' + __function + ',' + __line + '] ' + path);
-  cb(EPERM);
+  logger.info('[' + __function + ',' + __line + '] ' + path + ' ' + mode);
+  udm.createFolder(path, function (error, response) {
+    if (error) {
+      logger.error(error);
+      cb(fuse.ENOENT);
+    } else {
+      cb(0);
+    }
+  });
 }
 
 function rmdir(path, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path);
-  cb(EPERM);
+  udm.deleteFolder(path, function (error, response) {
+    if (error) {
+      logger.error(error);
+      cb(fuse.ENOENT);
+    } else {
+      cb(0);
+    }
+  });
+}
+
+function truncate(path, size, cb) {
+  logger.info('[' + __function + ',' + __line + '] ' + path);
+  logger.info(path, size);
+  if (size !== 0) {
+    cb(fuse.EPERM);
+  } else {
+    cb(0);
+  }
+}
+
+function utimens(path, atime, mtime, cb) {
+  logger.info('[' + __function + ',' + __line + '] ' + path);
+  logger.info(path, atime, mtime);
+  cb(0);
+}
+
+function chown(path, uid, gid, cb) {
+  logger.info('[' + __function + ',' + __line + '] ' + path);
+  logger.info(path, uid, gid);
+  cb(0);
+}
+
+function chmod(path, mode, cb) {
+  logger.info('[' + __function + ',' + __line + '] ' + path);
+  logger.info(path, mode);
+  cb(0);
 }
 
 function init(cb) {
@@ -137,9 +252,9 @@ function init(cb) {
   cb();
 }
 
-function setxattr(path, name, value, size, a, b, c) {
+function setxattr(path, name, buffer, length, offset, flags, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path);
-  logger.verbose('Setxattr called:', path, name, value, size, a, b, c);
+  logger.info('Setxattr called:', path, name, buffer, length, offset, flags);
   cb(0);
 }
 
@@ -168,13 +283,21 @@ function statfs(path, cb) {
   });
 }
 
+function flush(path, fd, cb) {
+  logger.info('[' + __function + ',' + __line + '] ' + path);
+  logger.info(path, fd);
+  cb(0);
+}
+
 function destroy(cb) {
   logger.info('[' + __function + ',' + __line + '] ');
   logger.info('File system stopped');
   cb();
 }
 
-var handlers = {
+var rwHandlers = {
+  options: [],
+
   getattr: getattr,
   readdir: readdir,
   open: open,
@@ -187,8 +310,26 @@ var handlers = {
   mkdir: mkdir,
   rmdir: rmdir,
   init: init,
+  truncate: truncate,
+  utimens: utimens,
+  chown: chown,
+  chmod: chmod,
+  flush: flush,
   destroy: destroy,
   setxattr: setxattr,
+  statfs: statfs
+};
+
+var roHandlers = {
+  options: [],
+
+  getattr: getattr,
+  readdir: readdir,
+  open: open,
+  read: read,
+  release: release,
+  init: init,
+  destroy: destroy,
   statfs: statfs
 };
 
@@ -198,11 +339,12 @@ function usage() {
     '\n' +
     'Options:\n' +
     '-d                 : make FUSE print debug statements.\n' +
-    '-m                 : specify web storage module.\n' +
-    '-o                 : options for the module.\n' +
+    '-m <module>        : specify web storage module.\n' +
+    '-w                 : file writeable support.\n' +
+    '-o <options>       : options for the module.\n' +
     '\n' +
     'Example:\n' +
-    'node udFuse.fs -d /tmp/mnt\n'
+    'node udFuse.fs -m Sample -d /tmp/mnt\n'
   );
 }
 
@@ -225,6 +367,8 @@ function parseArgs() {
   for( i = 2; i < args.length; i++) {
     if (args[i] === '-d') {
       options.debugFuse = true;
+    } else if (args[i] === '-w') {
+      options.writeable = true;
     } else if (args[i] === '-m') {
       options.module = args[++i];
     } else if (args[i] === '-o') {
@@ -240,8 +384,18 @@ function parseArgs() {
 (function main() {
   if (parseArgs()) {
     logger.info('Mount point: ' + options.mountPoint);
-    if (options.debugFuse)
+    var handlers;
+    if (options.writeable) {
+      logger.info('Read-write File System mounted');
+      handlers = rwHandlers;
+    } else {
+      logger.info('Read-only File System mounted');
+      handlers = roHandlers;
+    }
+    if (options.debugFuse) {
       logger.info('FUSE debugging enabled');
+      handlers.options.push('debug');
+    }
     try {
       handlers.force = true;
       fuse.mount(options.mountPoint, handlers);

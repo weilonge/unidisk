@@ -32,6 +32,8 @@ udManager.prototype.queueHandler = function (id, task, callback) {
 
 udManager.prototype.init = function(options){
   var self = this;
+
+  this._openedFileList = {};
   this.webStorage = new options.webStorageModule();
   this.metaCache = options.metaCacheModule;
   this.dataCache = options.dataCacheModule;
@@ -67,6 +69,55 @@ udManager.prototype.showStat = function (cb) {
     }
   };
   retry();
+};
+
+udManager.prototype.createEmptyFile = function (path, cb) {
+  var self = this;
+  this.webStorage.createEmptyFile(path, function (error, response) {
+    if (!error) {
+      self.metaCache.clear('/', true);
+      self.dataCache.clear('/', true);
+    }
+    cb(error, response);
+  });
+};
+
+udManager.prototype.openFile = function (path, flags, cb) {
+  const MAX_FILE_OPEN_NUM = 1024;
+  var availableSlot = -1;
+  for (var i = 0; i < MAX_FILE_OPEN_NUM; i++) {
+    if (!this._openedFileList[i]) {
+      availableSlot = i;
+      break;
+    }
+  }
+  if (availableSlot < 0) {
+    cb({error: 'Max opening file number exceeds.'});
+  } else {
+    this._openedFileList[i] = {
+      path: path,
+      flags: flags
+    };
+    this.webStorage.openFile(path, flags, i, function (error, response) {
+      cb(error, {fd: i});
+    });
+  }
+};
+
+udManager.prototype.closeFile = function (path, fd, cb) {
+  var list = this._openedFileList, self = this;
+  if (list[fd] && list[fd].path === path) {
+    list[fd] = null;
+    this.webStorage.commitFileData(path, fd, function (error, response) {
+      if (!error && list[fd].flags !== 'r') {
+        self.metaCache.clear('/', true);
+        self.dataCache.clear('/', true);
+      }
+      cb(error, response);
+    });
+  } else {
+    cb({error: 'No fd found'});
+  }
 };
 
 udManager.prototype.getFileMeta = function (path, cb) {
@@ -289,6 +340,58 @@ udManager.prototype.downloadFileInMultiRange = function(path, list, cb) {
     cb(null, {
       data: "OK!"
     });
+  });
+};
+
+udManager.prototype.write = function (path, fd, buffer, offset, length, cb) {
+  var self = this;
+  this.webStorage.writeFileData(path, fd, buffer, offset, length,
+    function (error, response) {
+    cb(error, response);
+  });
+};
+
+udManager.prototype.deleteFile = function (path, cb) {
+  var self = this;
+  this.webStorage.deleteFile(path, function (error, response) {
+    if (!error) {
+      self.metaCache.clear('/', true);
+      self.dataCache.clear('/', true);
+    }
+    cb(error, response);
+  });
+};
+
+udManager.prototype.createFolder = function (path, cb) {
+  var self = this;
+  this.webStorage.createFolder(path, function (error, response) {
+    if (!error) {
+      self.metaCache.clear('/', true);
+      self.dataCache.clear('/', true);
+    }
+    cb(error, response);
+  });
+};
+
+udManager.prototype.deleteFolder = function (path, cb) {
+  var self = this;
+  this.webStorage.deleteFolder(path, function (error, response) {
+    if (!error) {
+      self.metaCache.clear('/', true);
+      self.dataCache.clear('/', true);
+    }
+    cb(error, response);
+  });
+};
+
+udManager.prototype.move = function (src, dst, cb) {
+  var self = this;
+  this.webStorage.move(src, dst, function (error, response) {
+    if (!error) {
+      self.metaCache.clear('/', true);
+      self.dataCache.clear('/', true);
+    }
+    cb(error, response);
   });
 };
 
