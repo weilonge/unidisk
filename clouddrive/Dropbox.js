@@ -20,7 +20,6 @@ Dropbox.prototype.init = function (options){
   } else {
     this.USERTOKEN = Settings.get('dropbox_token');
   }
-  this.registerChange();
 };
 
 Dropbox.prototype.isIllegalFileName = function (path) {

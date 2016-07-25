@@ -43,6 +43,7 @@ udManager.prototype.init = function(options){
 
   this.webStorage.init(options.moduleOpt);
   this.webStorage.on('fileChange', function (evt) {
+    logger.info('Got file change notification!');
     self.metaCache.clear(evt.path, evt.recursive);
     self.dataCache.clear(evt.path, evt.recursive);
   });
@@ -50,6 +51,12 @@ udManager.prototype.init = function(options){
   this.dataCache.init(UD_BLOCK_READING_SIZE);
   this.FileDownloadQueue = foco.priorityQueue(
     this.queueHandler.bind(this), UD_QUEUE_CONCURRENCY);
+
+  if (this.webStorage.registerChange) {
+    this.webStorage.registerChange();
+  } else {
+    logger.info('No file change notification for this module');
+  }
 };
 
 udManager.prototype.showStat = function (cb) {

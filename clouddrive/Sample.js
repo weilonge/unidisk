@@ -22,6 +22,7 @@ Sample.prototype.init = function (options){
   this._IS_WEB = typeof document !== 'undefined' &&
     typeof window !== 'undefined';
   var jsonFileName = options.JSONPath, self = this;
+  this._jsonFileName = jsonFileName;
   if (this._IS_WEB) {
     var xmlhttp = new XMLHttpRequest();
     xmlhttp.open('get', jsonFileName, false);
@@ -33,8 +34,11 @@ Sample.prototype.init = function (options){
   }
 
   this._writePendingData = {};
+};
 
-  fs.watchFile(jsonFileName, function (curr, prev) {
+Sample.prototype.registerChange = function () {
+  var self = this;
+  fs.watchFile(this._jsonFileName, function (curr, prev) {
     self.emit('fileChange', {
       path: '/',
       recursive: true,
@@ -45,8 +49,8 @@ Sample.prototype.init = function (options){
     });
     self._TEST_DATA = null;
     // A technique here to remove the cached module by require.
-    delete require.cache[require.resolve(jsonFileName)];
-    self._TEST_DATA = require(jsonFileName);
+    delete require.cache[require.resolve(self._jsonFileName)];
+    self._TEST_DATA = require(self._jsonFileName);
   });
 };
 
