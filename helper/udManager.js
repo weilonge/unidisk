@@ -154,7 +154,7 @@ udManager.prototype.getFileMeta = function (path, cb) {
   var self = this;
   var retry = function () {
     var meta = self.metaCache.get(path);
-    if (meta) {
+    if (self.metaCache.hasEntry(path)) {
       process.nextTick(function () {
         cb(null, { data : meta });
       });
