@@ -10,8 +10,12 @@ MetaCache.update = function (path, data) {
   this._fileMetaCache[path] = data;
 };
 
+MetaCache.hasEntry = function (path) {
+  return this._fileMetaCache.hasOwnProperty(path);
+};
+
 MetaCache.get = function (path) {
-  if (this._fileMetaCache.hasOwnProperty(path)) {
+  if (this.hasEntry(path)) {
     return this._fileMetaCache[path];
   }
   return null;
