@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 var fuse = require('fuse-bindings');
+var os = require('os')
 var options = {};  // See parseArgs()
 var udManager = require('./helper/udManager');
 var logger = require('./helper/log');
 var Settings = require('./helper/Settings');
-var FUSE_IOSIZE = Settings.get('fuse_iosize');
+const FUSE_IOSIZE = Settings.get('fuse_iosize');
+const IS_OSX = os.platform() === 'darwin';
 require('./helper/ObjectExtend');
 
 var udm;
@@ -398,7 +400,7 @@ function parseArgs() {
     if (options.writeable) {
       logger.info('Read-write File System mounted');
       handlers = rwHandlers;
-      handlers.options.push('daemon_timeout=1200');
+      IS_OSX && handlers.options.push('daemon_timeout=1200');
     } else {
       logger.info('Read-only File System mounted');
       handlers = roHandlers;
@@ -407,7 +409,12 @@ function parseArgs() {
       logger.info('FUSE debugging enabled');
       handlers.options.push('debug');
     }
-    handlers.options.push('iosize=' + FUSE_IOSIZE);
+    if (IS_OSX) {
+      handlers.options.push('iosize=' + FUSE_IOSIZE);
+      handlers.options.push('volname=' + 'Unidisk-' + options.module);
+      handlers.options.push('local');
+    }
+    handlers.options.push('fsname=' + 'Unidisk-' + options.module);
     try {
       handlers.force = true;
       fuse.mount(options.mountPoint, handlers);
