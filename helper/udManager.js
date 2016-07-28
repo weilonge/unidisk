@@ -121,7 +121,8 @@ udManager.prototype.closeFile = function (path, fd, cb) {
 
   function close() {
     self.webStorage.commitFileData(path, fd, function (error, response) {
-      if (!error && list[fd].flags !== 'r') {
+      // FIXME Excluding 'r+' flag to clear cache for workaround.
+      if (!error && list[fd].flags !== 'r' && list[fd].flags !== 'r+') {
         self.metaCache.clear('/', true);
         self.dataCache.clear('/', true);
       }
