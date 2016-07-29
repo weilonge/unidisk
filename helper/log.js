@@ -23,7 +23,7 @@ if (_IS_WEB) {
 } else {
   var winston = require('winston');
   logger = new (winston.Logger)({
-    level: 'silly',
+    level: 'error',
     transports: [
       new winston.transports.Console({
         json: false,
@@ -51,8 +51,8 @@ if (_IS_WEB) {
     exitOnError: false
   });
 
-  logger.transports.console.level = 'info';
-  logger.transports.file.level = 'verbose';
+  logger.transports.console.level = 'error';
+  logger.transports.file.level = 'error';
 }
 
 module.exports = logger;
