@@ -38,6 +38,11 @@ Sample.prototype.init = function (options){
 
 Sample.prototype.registerChange = function () {
   var self = this;
+  if (this._IS_WEB) {
+    logger.info('File watcher for Sample module ' +
+                'does not support in browser yet.');
+    return;
+  }
   fs.watchFile(this._jsonFileName, function (curr, prev) {
     self.emit('fileChange', {
       path: '/',
