@@ -1,5 +1,5 @@
 var Settings = require('../helper/Settings');
-var DataCache = require('../helper/DataCache');
+var DataCache = new (require('../helper/DataCache'))();
 var assert = require('chai').assert;
 var foco = require('foco');
 describe('DataCache', function() {

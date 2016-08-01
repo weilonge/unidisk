@@ -38,8 +38,8 @@ udManager.prototype.init = function(options){
 
   this._openedFileList = {};
   this.webStorage = new options.webStorageModule();
-  this.metaCache = options.metaCacheModule;
-  this.dataCache = options.dataCacheModule;
+  this.metaCache = new options.metaCacheModule();
+  this.dataCache = new options.dataCacheModule();
 
   this.webStorage.init(options.moduleOpt);
   this.webStorage.on('fileChange', function (evt) {

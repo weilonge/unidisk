@@ -1,4 +1,4 @@
-var MetaCache = require('../helper/MetaCache');
+var MetaCache = new (require('../helper/MetaCache'))();
 var assert = require('chai').assert;
 describe('MetaCache', function() {
   describe('#init()', function () {
