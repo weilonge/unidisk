@@ -2,8 +2,6 @@ var fs = require('fs');
 var Settings = require('./Settings');
 var logger = require('./log');
 
-var DiskDataStore = {};
-
 var fs = require('fs');
 var deleteFolderRecursive = function(path) {
   if( fs.existsSync(path) ) {
@@ -19,13 +17,15 @@ var deleteFolderRecursive = function(path) {
   }
 };
 
-DiskDataStore.init = function (){
+var DiskDataStore = function () {};
+
+DiskDataStore.prototype.init = function (){
   this._CACHE_PATH = Settings.get('cache_path');
   deleteFolderRecursive(this._CACHE_PATH);
   fs.mkdirSync(this._CACHE_PATH);
 };
 
-DiskDataStore.deleteEntry = function (key){
+DiskDataStore.prototype.deleteEntry = function (key){
   var fileName = this._CACHE_PATH + '/' + key;
   fs.unlink(fileName, function (err){
     if (err) throw err;
@@ -33,7 +33,7 @@ DiskDataStore.deleteEntry = function (key){
   });
 };
 
-DiskDataStore.readEntry =
+DiskDataStore.prototype.readEntry =
   function (key, targetBuffer, targetOffset, sourceOffset, length){
   var fileName = this._CACHE_PATH + '/' + key;
   var fd = fs.openSync(fileName, 'rs');
@@ -41,7 +41,7 @@ DiskDataStore.readEntry =
   fs.closeSync(fd);
 };
 
-DiskDataStore.writeEntry = function (key, data, cb){
+DiskDataStore.prototype.writeEntry = function (key, data, cb){
   var fileName = this._CACHE_PATH + '/' + key;
   fs.writeFile(fileName, data, cb);
 };

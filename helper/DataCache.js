@@ -1,23 +1,25 @@
-var DataCache = {};
 var Settings = require('./Settings');
 var Path = require('path');
 var logger = require('./log');
 
-DataCache.init = function (blockSize) {
+var DataCache = function () {};
+
+DataCache.prototype.init = function (blockSize) {
   this._IS_WEB = typeof document !== 'undefined' &&
     typeof window !== 'undefined';
   this._MAX_DATA_CACHE_ENTRY = Settings.get('max_data_cache_entry');
   this._BLOCK_SIZE = blockSize;
 
-  this._dataStore = this._IS_WEB ?
+  var DataStore = this._IS_WEB ?
     require('./MemoryDataStore') : require('./DiskDataStore');
+  this._dataStore = new DataStore();
   this._dataStore.init();
 
   this._fileDataCache = {};
   this._priorityQueue = [];
 };
 
-DataCache.update = function (key, data) {
+DataCache.prototype.update = function (key, data) {
   if (this._fileDataCache.hasOwnProperty(key) ) {
     // Update an exist cache entry.
     this._updateEntry(key, data);
@@ -36,36 +38,36 @@ DataCache.update = function (key, data) {
   }
 };
 
-DataCache._updateEntry = function (key, data) {
+DataCache.prototype._updateEntry = function (key, data) {
   this._fileDataCache[key] = data;
 };
 
-DataCache._pushEntry = function (key, data) {
+DataCache.prototype._pushEntry = function (key, data) {
   this._fileDataCache[key] = data;
   this._priorityQueue.push(key);
 };
 
-DataCache._removeEntry = function (key) {
+DataCache.prototype._removeEntry = function (key) {
   delete this._fileDataCache[key];
   this._dataStore.deleteEntry(key);
 };
 
-DataCache._popLowPriorityKey = function () {
+DataCache.prototype._popLowPriorityKey = function () {
   return this._priorityQueue.shift();
 };
 
-DataCache.updateStatus = function (md5sum, status) {
+DataCache.prototype.updateStatus = function (md5sum, status) {
   this._fileDataCache[md5sum].status = status;
 };
 
-DataCache.get = function (md5sum) {
+DataCache.prototype.get = function (md5sum) {
   if (this._fileDataCache.hasOwnProperty(md5sum)) {
     return this._fileDataCache[md5sum];
   }
   return null;
 };
 
-DataCache.writeCache = function (task, data, cb){
+DataCache.prototype.writeCache = function (task, data, cb){
   var self = this;
   this._dataStore.writeEntry(task.md5sum, data, function(err) {
     if(err) {
@@ -78,7 +80,7 @@ DataCache.writeCache = function (task, data, cb){
   });
 };
 
-DataCache.readCache = function (path, buffer, offset, size, requestList, cb){
+DataCache.prototype.readCache = function (path, buffer, offset, size, requestList, cb){
   var seek = 0,
     writeSize = 0,
     cursor_moved = 0;
@@ -116,7 +118,7 @@ DataCache.readCache = function (path, buffer, offset, size, requestList, cb){
   cb();
 };
 
-DataCache._generateKeyListByPath = function (path, recursive) {
+DataCache.prototype._generateKeyListByPath = function (path, recursive) {
   var list = [];
   for (var i in this._fileDataCache) {
     var t = this._fileDataCache[i].path;
@@ -131,7 +133,7 @@ DataCache._generateKeyListByPath = function (path, recursive) {
   return list;
 };
 
-DataCache.clear = function (path, recursive){
+DataCache.prototype.clear = function (path, recursive){
   var list = this._generateKeyListByPath(path, recursive);
   for (var i = 0; i < list.length; i++) {
     var key = list[i];
@@ -143,7 +145,7 @@ DataCache.clear = function (path, recursive){
   }
 };
 
-DataCache.generateKey = function (task){
+DataCache.prototype.generateKey = function (task){
   function hashCode(str) {
     var hash = 0, i, chr, len;
     if (str.length === 0) return hash;

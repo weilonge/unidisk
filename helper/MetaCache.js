@@ -1,38 +1,39 @@
-var MetaCache = {};
 var Path = require('path');
 
-MetaCache.init = function (){
+var MetaCache = function () {};
+
+MetaCache.prototype.init = function (){
   this._fileMetaCache = {};
   this._fileListCache = {};
 };
 
-MetaCache.update = function (path, data) {
+MetaCache.prototype.update = function (path, data) {
   this._fileMetaCache[path] = data;
 };
 
-MetaCache.hasEntry = function (path) {
+MetaCache.prototype.hasEntry = function (path) {
   return this._fileMetaCache.hasOwnProperty(path);
 };
 
-MetaCache.get = function (path) {
+MetaCache.prototype.get = function (path) {
   if (this.hasEntry(path)) {
     return this._fileMetaCache[path];
   }
   return null;
 };
 
-MetaCache.updateList = function (path, data) {
+MetaCache.prototype.updateList = function (path, data) {
   this._fileListCache[path] = data;
 };
 
-MetaCache.getList = function (path) {
+MetaCache.prototype.getList = function (path) {
   if (this._fileListCache.hasOwnProperty(path)) {
     return this._fileListCache[path];
   }
   return null;
 };
 
-MetaCache.clear = function (path, recursive){
+MetaCache.prototype.clear = function (path, recursive){
   if (!path) {
     //this._fileMetaCache = {};
     //this._fileListCache = {};
