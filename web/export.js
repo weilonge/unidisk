@@ -1,7 +1,7 @@
 var udManager = require('../helper/udManager');
 
 var UnidiskHelper = {
-  create: function (storageName, options) {
+  create: function (storageName, profile) {
     var storageMod;
     switch (storageName) {
     case 'Sample':
@@ -16,7 +16,7 @@ var UnidiskHelper = {
     }
     var udm = new udManager();
     udm.init({
-      moduleOpt: options,
+      profile: profile,
       metaCacheModule: require('../helper/MetaCache'),
       dataCacheModule: require('../helper/DataCache'),
       webStorageModule: storageMod

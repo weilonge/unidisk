@@ -6,6 +6,26 @@
   "prefetch_blocks": 10,
   "max_data_cache_entry": 25,
   "cache_path": "/tmp/ud/cache",
-  "baidu_pcs_token": "TOKEN_EXAMPLE",
-  "dropbox_token": "TOKEN_EXAMPLE"
+  "profile": {
+    "MyDropbox": {
+      "type": "mount",
+      "module": "Dropbox",
+      "writable": true,
+      "cacheStore": "memory",
+      "token": "EXAMPLE_TOKEN"
+    },
+    "MyPCS": {
+      "type": "mount",
+      "module": "pcs",
+      "cacheStore": "disk",
+      "token": "EXAMPLE_TOKEN"
+    },
+    "Sample": {
+      "type": "mount",
+      "module": "Sample",
+      "writable": true,
+      "cacheStore": "memory",
+      "JSONPath": "./samplefs.json"
+    }
+  }
 }

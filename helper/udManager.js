@@ -41,14 +41,14 @@ udManager.prototype.init = function(options){
   this.metaCache = new options.metaCacheModule();
   this.dataCache = new options.dataCacheModule();
 
-  this.webStorage.init(options.moduleOpt);
+  this.webStorage.init(options.profile);
   this.webStorage.on('fileChange', function (evt) {
     logger.info('Got file change notification!');
     self.metaCache.clear(evt.path, evt.recursive);
     self.dataCache.clear(evt.path, evt.recursive);
   });
-  this.metaCache.init();
-  this.dataCache.init(UD_BLOCK_READING_SIZE);
+  this.metaCache.init(options.profile);
+  this.dataCache.init(options.profile, UD_BLOCK_READING_SIZE);
   this.FileDownloadQueue = foco.priorityQueue(
     this.queueHandler.bind(this), UD_QUEUE_CONCURRENCY);
 
