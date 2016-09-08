@@ -1,4 +1,3 @@
-var Settings = require('../helper/Settings');
 var logger = require('../helper/log');
 const EventEmitter = require('events');
 const util = require('util');
@@ -15,11 +14,7 @@ Dropbox.prototype.init = function (options){
 
   this._writePendingData = {};
 
-  if (options.token) {
-    this.USERTOKEN = options.token;
-  } else {
-    this.USERTOKEN = Settings.get('dropbox_token');
-  }
+  this.USERTOKEN = options.token;
 };
 
 Dropbox.prototype.isIllegalFileName = function (path) {

@@ -4,6 +4,25 @@
   "fuse_iosize": 65536,
   "queue_concurrency": 6,
   "prefetch_blocks": 15,
-  "max_data_cache_entry": 80
+  "max_data_cache_entry": 80,
+  "profile": {
+    "MyDropbox": {
+      "type": "mount",
+      "module": "Dropbox",
+      "cacheStore": "memory",
+      "token": "EXAMPLE_TOKEN"
+    },
+    "MyPCS": {
+      "type": "mount",
+      "module": "pcs",
+      "cacheStore": "memory",
+      "token": "EXAMPLE_TOKEN"
+    },
+    "Sample": {
+      "type": "mount",
+      "module": "Sample",
+      "cacheStore": "memory",
+      "JSONPath": "./samplefs.json"
+    }
+  }
 }
-

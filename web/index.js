@@ -11,7 +11,10 @@ function utf16Uint8ArrayToString(uintArray) {
 let verifyPattern = {
   'Dropbox_dummy.txt': {
     module: 'Dropbox',
-    options: {},
+    profile: {
+      cacheStore: 'memory',
+      token: 'EXAMPLE_TOKEN'
+    },
     path: '/dir1/dir2/dummy.txt',
     offset: 1,
     size: 6,
@@ -20,7 +23,10 @@ let verifyPattern = {
   },
   'Sample_dummy.txt': {
     module: 'Sample',
-    options: { JSONPath: './test_fixture.json' },
+    profile: {
+      cacheStore: 'memory',
+      JSONPath: './test_fixture.json'
+    },
     path: '/dir1/dir2/dummy.txt',
     offset: 0,
     size: 12,
@@ -32,7 +38,7 @@ let verifyPattern = {
 function verify(pattern) {
   return new Promise(resolve => {
     const path = pattern.path;
-    const udm = UnidiskHelper.create(pattern.module, pattern.options);
+    const udm = UnidiskHelper.create(pattern.module, pattern.profile);
     const EXPECTED_SIZE = pattern.size;
     const EXPECTED_STRING = pattern.string;
     const array = new Uint8Array(EXPECTED_SIZE - pattern.offset);

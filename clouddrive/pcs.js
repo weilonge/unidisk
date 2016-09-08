@@ -1,5 +1,4 @@
 var unirest = require('unirest');
-var Settings = require('../helper/Settings');
 var logger = require('../helper/log');
 const EventEmitter = require('events');
 const util = require('util');
@@ -7,7 +6,6 @@ const util = require('util');
 var XFR_ESTIMATING_MIN_SPEED = 20 * 1024; // n bytes/sec
 var XFR_ESTIMATING_MIN_TIME = 20; // secs
 var XFR_CONNECTION_TIMEOUT = 10; // secs
-var XFR_PROXY = "http://proxy.hinet.net:80";
 
 var PCS_HOSTNAME = "pcs.baidu.com";
 var PCS_HOSTNAME_D = "pcs.baidu.com"; // "d.pcs.baidu.com";
@@ -20,8 +18,9 @@ var pcs = function (){
 };
 util.inherits(pcs, EventEmitter);
 
-pcs.prototype.init = function (){
-  this.USERTOKEN = Settings.get('baidu_pcs_token');
+pcs.prototype.init = function (options){
+  this.USERTOKEN = options.token;
+  this.PROXY = options.proxy;
 };
 
 pcs.prototype.isIllegalFileName = function (path) {
@@ -66,7 +65,7 @@ pcs.prototype._execute = function (options, cb){
   var that = this;
   var link = "https://" + PCS_HOSTNAME + this._generatePath(options);
   unirest.get(link)
-  .proxy(XFR_PROXY)
+  .proxy(this.PROXY)
   .timeout(XFR_CONNECTION_TIMEOUT * 1000)
   .end(function (httpResponse) {
     var errorOutput = null;
@@ -112,7 +111,7 @@ pcs.prototype._download = function (options, cb){
   var link = "https://" + PCS_HOSTNAME_D + this._generatePath(options);
   var estimationTime = (options.size / XFR_ESTIMATING_MIN_SPEED);
   unirest.get(link)
-  .proxy(XFR_PROXY)
+  .proxy(this.PROXY)
   .timeout(XFR_CONNECTION_TIMEOUT * 1000)
   .encoding(null)
   .headers({
@@ -217,11 +216,10 @@ pcs.prototype.getFileListRecycle = function (cb){
   }, cb);
 }
 
-
 pcs.prototype._tokenRequest = function (link, cb){
   unirest.get(link)
   .header('Accept', 'application/json')
-  .proxy(XFR_PROXY)
+  .proxy(this.PROXY)
   .timeout(XFR_CONNECTION_TIMEOUT * 1000)
   .end(function (httpResponse) {
     var errorOutput = null;

@@ -49,4 +49,8 @@ Settings.set = function (key, value){
   this.table[key] = value;
 };
 
+Settings.getProfile = function (name){
+  return this.table.profile[name];
+};
+
 module.exports = Settings;

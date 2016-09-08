@@ -256,7 +256,7 @@ function init(cb) {
   logger.info('File system started at ' + options.mountPoint);
   udm = new udManager();
   udm.init({
-    moduleOpt: options.moduleOpt,
+    profile: options.profile,
     metaCacheModule: require('./helper/MetaCache'),
     dataCacheModule: require('./helper/DataCache'),
     webStorageModule: require('./clouddrive/' + options.module)
@@ -352,8 +352,9 @@ function usage() {
     'Options:\n' +
     '-d                 : make FUSE print debug statements.\n' +
     '-m <module>        : specify web storage module.\n' +
-    '-w                 : file writeable support.\n' +
-    '-o <options>       : options for the module.\n' +
+    '-p <profile>       : specify a profile in your settings. This option can' +
+                         ' override all arguments in command line.\n' +
+    '-w                 : file writable support.\n' +
     '\n' +
     'Example:\n' +
     'node udFuse.fs -m Sample -d /tmp/mnt\n'
@@ -367,25 +368,16 @@ function parseArgs() {
     return false;
   }
   options.mountPoint = args.pop();
-  options.moduleOpt = {};
-
-  function createModuleOpt(item, index){
-    var pair = item.split('=');
-    var key = pair[0];
-    var val = pair[1];
-    options.moduleOpt[key] = val;
-  }
 
   for( i = 2; i < args.length; i++) {
     if (args[i] === '-d') {
       options.debugFuse = true;
     } else if (args[i] === '-w') {
-      options.writeable = true;
+      options.writable = true;
     } else if (args[i] === '-m') {
       options.module = args[++i];
-    } else if (args[i] === '-o') {
-      var mOpts = args[++i].split(',');
-      mOpts.forEach(createModuleOpt);
+    } else if (args[i] === '-p') {
+      options.profileName = args[++i];
     } else {
       return false;
     }
@@ -397,7 +389,12 @@ function parseArgs() {
   if (parseArgs()) {
     logger.info('Mount point: ' + options.mountPoint);
     var handlers;
-    if (options.writeable) {
+    if (options.profileName) {
+      options.profile = Settings.getProfile(options.profileName);
+      options.module = options.profile.module;
+      options.writable = options.profile.writable;
+    }
+    if (options.writable) {
       logger.info('Read-write File System mounted');
       handlers = rwHandlers;
       IS_OSX && handlers.options.push('daemon_timeout=1200');
@@ -417,7 +414,9 @@ function parseArgs() {
     handlers.options.push('fsname=' + 'Unidisk-' + options.module);
     try {
       handlers.force = true;
-      fuse.mount(options.mountPoint, handlers);
+      if (options.profile.type === 'mount') {
+        fuse.mount(options.mountPoint, handlers);
+      }
     } catch (e) {
       logger.info('Exception when starting file system: ' + e);
     }

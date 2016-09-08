@@ -4,14 +4,23 @@ var logger = require('./log');
 
 var DataCache = function () {};
 
-DataCache.prototype.init = function (blockSize) {
-  this._IS_WEB = typeof document !== 'undefined' &&
-    typeof window !== 'undefined';
+DataCache.prototype.init = function (profile, blockSize) {
   this._MAX_DATA_CACHE_ENTRY = Settings.get('max_data_cache_entry');
   this._BLOCK_SIZE = blockSize;
 
-  var DataStore = this._IS_WEB ?
-    require('./MemoryDataStore') : require('./DiskDataStore');
+  function selectDataStore(storeName) {
+    var store;
+    switch (storeName) {
+    case 'memory':
+      store = require('./MemoryDataStore');
+      break;
+    case 'disk':
+      store = require('./DiskDataStore');
+    }
+    return store;
+  }
+
+  var DataStore = selectDataStore(profile.cacheStore);
   this._dataStore = new DataStore();
   this._dataStore.init();
 
