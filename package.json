@@ -9,6 +9,7 @@
   "author": "Wei-Lun Lee (Sean)",
   "dependencies": {
     "foco": "^1.1.0",
+    "fs-extra": "^0.30.0",
     "fuse-bindings": "^2.1.2",
     "unirest": "^0.3.7",
     "winston": "^2.2.0",

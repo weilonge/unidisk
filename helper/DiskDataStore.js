@@ -1,32 +1,21 @@
-var fs = require('fs');
+var fs = require('fs-extra');
 var Settings = require('./Settings');
 var logger = require('./log');
 
-var fs = require('fs');
-var deleteFolderRecursive = function(path) {
-  if( fs.existsSync(path) ) {
-    fs.readdirSync(path).forEach(function(file,index){
-      var curPath = path + '/' + file;
-      if(fs.lstatSync(curPath).isDirectory()) { // recurse
-        deleteFolderRecursive(curPath);
-      } else { // delete file
-        fs.unlinkSync(curPath);
-      }
-    });
-    fs.rmdirSync(path);
-  }
-};
-
 var DiskDataStore = function () {};
+
+DiskDataStore.prototype.retrieveFileName = function(key) {
+  return this._CACHE_PATH + '/' + key;
+};
 
 DiskDataStore.prototype.init = function (){
   this._CACHE_PATH = Settings.get('cache_path');
-  deleteFolderRecursive(this._CACHE_PATH);
-  fs.mkdirSync(this._CACHE_PATH);
+  fs.removeSync(this._CACHE_PATH);
+  fs.mkdirsSync(this._CACHE_PATH);
 };
 
 DiskDataStore.prototype.deleteEntry = function (key){
-  var fileName = this._CACHE_PATH + '/' + key;
+  var fileName = this.retrieveFileName(key);
   fs.unlink(fileName, function (err){
     if (err) throw err;
     logger.verbose('successfully deleted ' + fileName);
@@ -35,14 +24,14 @@ DiskDataStore.prototype.deleteEntry = function (key){
 
 DiskDataStore.prototype.readEntry =
   function (key, targetBuffer, targetOffset, sourceOffset, length){
-  var fileName = this._CACHE_PATH + '/' + key;
+  var fileName = this.retrieveFileName(key);
   var fd = fs.openSync(fileName, 'rs');
   fs.readSync(fd, targetBuffer, targetOffset, length, sourceOffset);
   fs.closeSync(fd);
 };
 
 DiskDataStore.prototype.writeEntry = function (key, data, cb){
-  var fileName = this._CACHE_PATH + '/' + key;
+  var fileName = this.retrieveFileName(key);
   fs.writeFile(fileName, data, cb);
 };
 
