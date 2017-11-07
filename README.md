@@ -2,19 +2,19 @@
 
 This project can help you to use Cloud Storage in a new way and provide the following features:
 
-*   Avalible storages
+*   Available storages
 
     *   JSON FS, Dropbox, BaiduYun
 
 *   Data/Meta Cache to improve response time
 
-*   Read-only
+*   Read-only (or support write-able file system partially)
 
 *   Adjustable Data Cache Pool size
 
 *   Prefetch data to improve the performance
 
-*   Support multi thread line to download blocks
+*   Download blocks in multi-threading
 
 *   Support Linux and MacOSX
 
@@ -31,7 +31,7 @@ This project can help you to use Cloud Storage in a new way and provide the foll
 
 ### Prepare settings.json
 
-*   Copy settings.json and customize 'cache_path'.
+*   Copy `settings.json` to your home folder and customize `cache_path`.
 
 ~~~
 $ mkdir ~/.unidisk && cp dist/settings.json.SAMPLE ~/.unidisk/settings.json
@@ -43,19 +43,20 @@ unidisk supports three kinds of storage to access: SampleJSON FS, Dropbox, and B
 
 ### Sample JSON FS
 
-*   Please prepare a valid JSON file or get it from 'dist/samplefs.json'
+*   Please prepare a valid JSON file or get it from `dist/samplefs.json`
+*   Give the absolute path to `JSONPath` of `Sample` profile in `settings.json`
 *   Use the command to mount JSON FS with your sample JSON file:
 
 ~~~
-$ ./udFuse.js -m Sample -o JSONPath=[path to a JSON file] [mount point]
+$ ./udFuse.js -p Sample [mount point]
 ~~~
 
 *   The storage is ready at the mount point you gave.
 
 ### Dropbox
 
-*   Please apply a Dropbox development account , and keep your API_KEY and API_SECRET
-*   Use this command to get the authrization link and browser the link then login your account
+*   Please apply a Dropbox development account , and keep your `API_KEY` and `API_SECRET`
+*   Use this command to get the authorization link and browser the link then login your account
 
 ~~~
 $ ./ud.js Dropbox getAuthLink [API_KEY]
@@ -64,13 +65,13 @@ $ ./ud.js Dropbox getAuthLink [API_KEY]
 ==============================
 ~~~
 
-*   Keep device_code shown in the page after login and authrization:
+*   Keep `device_code` shown in the page after login and authrization:
 
 ~~~
 QrlXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ~~~
 
-*   Use this command to get the acess_token:
+*   Use this command to get the `acess_token`:
 
 ~~~
 $ ./ud.js Dropbox getAccessToken [API_KEY] [API_SECRET] [DEVICE_CODE]
@@ -79,24 +80,24 @@ $ ./ud.js Dropbox getAccessToken [API_KEY] [API_SECRET] [DEVICE_CODE]
 ==============================
 ~~~
 
-*   Edit ~/.unidisk/settings.json and add the line:
+*   Edit `~/.unidisk/settings.json` and add the line in your Dropbox profile (e.g. MyDropbox):
 
 ~~~
-dropbox_token: "QrlXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXYYYYYYYYYYYYYYYYYYYYYYYYYYYY"
+token: "QrlXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXYYYYYYYYYYYYYYYYYYYYYYYYYYYY"
 ~~~
 
 *   Use this command to mount Dropbox:
 
 ~~~
-$ ./udFuse.js -m Dropbox [mount point]
+$ ./udFuse.js -p MyDropbox [mount point]
 ~~~
 
 *   The storage is ready at the mount point you gave.
 
 ### BaiduYun
 
-*   Please apply a BaiduYun development account , and keep your API_KEY and API_SECRET
-*   Use this command to get the authrization link and browser the link then login your account and input DEVICE_CODE:
+*   Please apply a BaiduYun development account, and keep your `API_KEY` and `API_SECRET`
+*   Use this command to get the authrization link and browser the link then login your account and input `DEVICE_CODE`:
 
 ~~~
 $ ./ud.js pcs getAccessToken [API_KEY] [API_SECRET]
@@ -109,16 +110,16 @@ waiting for verification...
 ==============================
 ~~~
 
-*   Edit ~/.unidisk/settings.json and add the line:
+*   Edit `~/.unidisk/settings.json` and add the line in your PCS profile (e.g. MyPCS):
 
 ~~~
-baidu_pcs_token: "23.XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+token: "23.XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ~~~
 
-*   Use this command to mount Dropbox:
+*   Use this command to mount BaiduYun PCS:
 
 ~~~
-$ ./udFuse.js -m pcs [mount point]
+$ ./udFuse.js -p MyPCS [mount point]
 ~~~
 
 *   The storage is ready at the mount point you gave.
