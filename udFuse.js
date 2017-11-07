@@ -357,7 +357,7 @@ function usage() {
     '-w                 : file writable support.\n' +
     '\n' +
     'Example:\n' +
-    'node udFuse.fs -m Sample -d /tmp/mnt\n'
+    'node udFuse.fs -p Sample -d /tmp/mnt\n'
   );
 }
 
