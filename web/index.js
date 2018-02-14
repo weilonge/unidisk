@@ -51,8 +51,10 @@ function verify(pattern) {
   });
 }
 
-verify(verifyPattern['Dropbox_dummy.txt']).then(() => {
-  return verify(verifyPattern['Sample_dummy.txt']);
-}).then(() => {
-  console.log('done');
-});
+Promise.resolve().then(
+  () => verify(verifyPattern['Sample_dummy.txt'])
+).then(
+//  () => verify(verifyPattern['Dropbox_dummy.txt'])
+//).then(
+  () => console.log('done')
+);
