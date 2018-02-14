@@ -11,5 +11,7 @@ gulp.task('unit-test', function() {
     .pipe(mocha({reporter: 'list'})).on('error', gutil.log);
 });
 
+gulp.task('test', ['unit-test']);
+
 // By default, we always run 'unit-test'. But 'unit-test' relies on 'jshint'
-gulp.task('default', ['unit-test']);
+gulp.task('default', ['test']);
