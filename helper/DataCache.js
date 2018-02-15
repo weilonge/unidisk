@@ -79,7 +79,7 @@ DataCache.prototype.get = function (md5sum) {
 DataCache.prototype.writeCache = function (task, data, cb){
   var self = this;
   this._dataStore.writeEntry(task.md5sum, data, function(err) {
-    if(err) {
+    if (err) {
       logger.error('writeCache: ' + JSON.stringify(err));
     } else {
       self.updateStatus(task.md5sum, 'DONE');
@@ -92,7 +92,7 @@ DataCache.prototype.writeCache = function (task, data, cb){
 DataCache.prototype.readCache = function (path, buffer, offset, size, requestList, cb){
   var seek = 0,
     writeSize = 0,
-    cursor_moved = 0;
+    cursorMoved = 0;
 
   for (var i in requestList) {
     var task = requestList[i];
@@ -101,16 +101,16 @@ DataCache.prototype.readCache = function (path, buffer, offset, size, requestLis
     }
     if (this._fileDataCache[task.md5sum] &&
       this._fileDataCache[task.md5sum].status === 'DONE') {
-      seek = ( offset + cursor_moved ) % this._BLOCK_SIZE;
+      seek = ( offset + cursorMoved ) % this._BLOCK_SIZE;
       writeSize = this._BLOCK_SIZE - seek;
-      if ((writeSize + cursor_moved ) > size) {
-        writeSize = size - cursor_moved;
+      if ((writeSize + cursorMoved ) > size) {
+        writeSize = size - cursorMoved;
       }
 
       this._dataStore.readEntry(task.md5sum,
-        buffer, cursor_moved, seek, writeSize);
+        buffer, cursorMoved, seek, writeSize);
 
-      cursor_moved += writeSize ;
+      cursorMoved += writeSize ;
     } else {
       logger.error(JSON.stringify({
         msg: '======= Critical Error =======',

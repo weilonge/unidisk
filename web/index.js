@@ -1,11 +1,13 @@
+/* global UnidiskHelper */
+
 function utf8Uint8ArrayToString(uintArray) {
-    var encodedString = String.fromCharCode.apply(null, uintArray),
-        decodedString = decodeURIComponent(escape(encodedString));
-    return decodedString;
+  var encodedString = String.fromCharCode.apply(null, uintArray),
+    decodedString = decodeURIComponent(escape(encodedString));
+  return decodedString;
 }
 
 function utf16Uint8ArrayToString(uintArray) {
-    return String.fromCharCode.apply(null, new Uint16Array(uintArray.buffer));;
+  return String.fromCharCode.apply(null, new Uint16Array(uintArray.buffer));
 }
 
 let verifyPattern = {
@@ -35,6 +37,14 @@ let verifyPattern = {
   }
 };
 
+const RESULT_NODE = document.getElementById('result');
+function ok(test, msg) {
+  let p = document.createElement('p');
+  p.textContent = msg;
+  p.classList.add(test ? 'pass' : 'error');
+  RESULT_NODE.appendChild(p);
+}
+
 function verify(pattern) {
   return new Promise(resolve => {
     const path = pattern.path;
@@ -43,9 +53,9 @@ function verify(pattern) {
     const EXPECTED_STRING = pattern.string;
     const array = new Uint8Array(EXPECTED_SIZE - pattern.offset);
 
-    udm.downloadFileInRangeByCache(path, array, pattern.offset, EXPECTED_SIZE, function (e, r) {
+    udm.downloadFileInRangeByCache(path, array, pattern.offset, EXPECTED_SIZE, function () {
       const data = pattern.stringConvertion(array);
-      console.log(data === EXPECTED_STRING, pattern.module, data);
+      ok(data === EXPECTED_STRING, pattern.module + data);
       resolve(data === EXPECTED_STRING);
     });
   });
@@ -56,5 +66,5 @@ Promise.resolve().then(
 ).then(
 //  () => verify(verifyPattern['Dropbox_dummy.txt'])
 //).then(
-  () => console.log('done')
+  () => ok(true, 'done')
 );

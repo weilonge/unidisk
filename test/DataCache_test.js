@@ -11,9 +11,9 @@ describe('DataCache', function() {
           path: '/test' + i,
           totalSize: i,
           mtime: 1000000,
-          status: "INIT",
-          priority: "HIGH",
-          md5sum: "",
+          status: 'INIT',
+          priority: 'HIGH',
+          md5sum: '',
           offset: 0,
           size: 0
         },

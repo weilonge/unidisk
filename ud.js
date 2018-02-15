@@ -8,26 +8,30 @@ var path = require('path');
 var logger = require('./helper/log');
 
 function showHelp(exeName){
+  /* eslint-disable no-console */
   console.log(
     '-- Universal Drive --\n' +
-    'Usage: " + exeName + " MODULE COMMAND [P1] [P2]\n' +
+    'Usage: ' + exeName + ' MODULE COMMAND [P1] [P2]\n' +
     '     MODULE: command of udManager or other cloud storage APIs.\n' +
     '\n' +
-    'Example: " + exeName + " quota\n'
+    'Example: ' + exeName + ' quota\n'
   );
+  /* eslint-enable no-console */
 }
 
 var cccb = function(error, response){
-  if( error ){
+  if (error) {
     logger.error(error);
-  }else{
+  } else {
+    /* eslint-disable no-console */
     console.log(response.data);
+    /* eslint-enable no-console */
   }
 }
 
-if( '--help' === process.argv[2] || '-h' === process.argv[2] ){
+if ('--help' === process.argv[2] || '-h' === process.argv[2]) {
   showHelp(path.basename(process.argv[1]));
-  return ;
+  process.exit(1);
 }
 
 var moduleSet = {
@@ -39,7 +43,7 @@ var moduleSet = {
 var ret = udUtility.invokeCommand(process.argv.slice(3),
   new moduleSet[process.argv[2]](), 1, cccb);
 
-if( 0 !== ret ){
+if (0 !== ret) {
   showHelp(path.basename(process.argv[1]));
   logger.error(ret);
 }

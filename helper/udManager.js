@@ -21,7 +21,7 @@ udManager.prototype._isIllegalFileName = function (path) {
 udManager.prototype.queueHandler = function (id, task, callback) {
   logger.verbose('  [B] ' + task.path + '|' + task.offset + '| downloading...');
   var self = this;
-  task.status = "DOWNLOADING";
+  task.status = 'DOWNLOADING';
   this.downloadFileInRange(task.path, task.offset, task.size, function(error, response){
     logger.verbose(task.path + '|' + task.offset + '| done!! ' + response.length);
 
@@ -62,16 +62,16 @@ udManager.prototype.init = function(options){
 udManager.prototype.showStat = function (cb) {
   var self = this;
   var retry = function () {
-    if( self.QuotaCache ) {
+    if (self.QuotaCache) {
       process.nextTick(function () {
         cb(null, self.QuotaCache );
       });
     } else {
       self.webStorage.quota(function(error, response){
-        if(error){
+        if (error) {
           logger.error('showStat: ' + JSON.stringify(error));
           retry();
-        }else{
+        } else {
           self.QuotaCache = response;
           cb(error, response);
         }
@@ -110,7 +110,7 @@ udManager.prototype.openFile = function (path, flags, cb) {
       writingBlocks: [],
       flags: flags
     };
-    this.webStorage.openFile(path, flags, i, function (error, response) {
+    this.webStorage.openFile(path, flags, i, function (error) {
       cb(error, {fd: i});
     });
   }
@@ -146,7 +146,7 @@ udManager.prototype.closeFile = function (path, fd, cb) {
 };
 
 udManager.prototype.getFileMeta = function (path, cb) {
-  if(this._isIllegalFileName(path)){
+  if (this._isIllegalFileName(path)) {
     process.nextTick(function () {
       cb(null, {data: null});
     });
@@ -159,12 +159,12 @@ udManager.prototype.getFileMeta = function (path, cb) {
       process.nextTick(function () {
         cb(null, { data : meta });
       });
-    }else{
+    } else {
       self.webStorage.getFileMeta(path, function(error, response){
-        if(error){
+        if (error) {
           logger.error('getFileMeta: ' + JSON.stringify(error));
           retry();
-        }else{
+        } else {
           self.metaCache.update(path, response.data);
           cb(error, response);
         }
@@ -175,7 +175,7 @@ udManager.prototype.getFileMeta = function (path, cb) {
 };
 
 udManager.prototype.getFileList = function (path, cb) {
-  if(this._isIllegalFileName(path)){
+  if (this._isIllegalFileName(path)) {
     process.nextTick(function () {
       cb(null, {data: null});
     });
@@ -188,12 +188,12 @@ udManager.prototype.getFileList = function (path, cb) {
       process.nextTick(function () {
         cb(null, { data : list });
       });
-    }else{
+    } else {
       self.webStorage.getFileList(path, function(error, response){
-        if(error){
+        if (error) {
           logger.error('getFileList: ' + JSON.stringify(error));
           retry();
-        }else{
+        } else {
           self.metaCache.updateList(path, response.data);
           cb(error, response);
         }
@@ -208,14 +208,14 @@ udManager.prototype._generateRequestList = function(fileMeta, offset, size, file
   var requestList = [];
 
   var alignedOffset = Math.floor( offset / UD_BLOCK_READING_SIZE) * UD_BLOCK_READING_SIZE;
-  for(; alignedOffset < endPos && alignedOffset < fileSize; alignedOffset += UD_BLOCK_READING_SIZE ){
+  for (; alignedOffset < endPos && alignedOffset < fileSize; alignedOffset += UD_BLOCK_READING_SIZE) {
     var task = {
       path: fileMeta.path,
       totalSize: fileMeta.size,
       mtime: fileMeta.mtime,
-      status: "INIT",
-      priority: "HIGH",
-      md5sum: "",
+      status: 'INIT',
+      priority: 'HIGH',
+      md5sum: '',
       offset: alignedOffset,
       size: ((alignedOffset + UD_BLOCK_READING_SIZE) > fileSize ? (fileSize - alignedOffset) : UD_BLOCK_READING_SIZE )
     };
@@ -226,14 +226,14 @@ udManager.prototype._generateRequestList = function(fileMeta, offset, size, file
   }
 
   const prefetchEndPos = endPos + UD_PREFETCH_SIZE;
-  for(; alignedOffset < prefetchEndPos && alignedOffset < fileSize; alignedOffset += UD_BLOCK_READING_SIZE ){
+  for (; alignedOffset < prefetchEndPos && alignedOffset < fileSize; alignedOffset += UD_BLOCK_READING_SIZE) {
     var prefetchTask = {
       path: fileMeta.path,
       totalSize: fileMeta.size,
       mtime: fileMeta.mtime,
-      status: "INIT",
-      priority: "PREFETCH",
-      md5sum: "",
+      status: 'INIT',
+      priority: 'PREFETCH',
+      md5sum: '',
       offset: alignedOffset,
       size: ((alignedOffset + UD_BLOCK_READING_SIZE) > fileSize ? (fileSize - alignedOffset) : UD_BLOCK_READING_SIZE )
     };
@@ -248,16 +248,16 @@ udManager.prototype._generateRequestList = function(fileMeta, offset, size, file
 
 udManager.prototype._isAllRequestDone = function (downloadRequest){
   var done = true;
-  for(var req in downloadRequest){
+  for (var req in downloadRequest) {
     var task = downloadRequest[req];
     var taskMd5sum = task.md5sum;
-    if( task.priority === "PREFETCH" ){
+    if (task.priority === 'PREFETCH') {
       continue;
     }
     var data = this.dataCache.get(taskMd5sum);
     if (data && data.status === 'DONE') {
       // do nothing.
-    }else{
+    } else {
       done = false;
       break;
     }
@@ -270,11 +270,11 @@ udManager.prototype._requestPushAndDownload = function (path, downloadRequest, c
 
   function checkRequest() {
     // Verify the download requests are all finished or not.
-    if( self._isAllRequestDone(downloadRequest) ){
+    if (self._isAllRequestDone(downloadRequest)) {
       logger.verbose('  [D] ' + 'All requests are done.');
       self.taskEvent.removeListener('done', checkRequest);
       cb();
-    }else {
+    } else {
       logger.verbose('keep waiting for all requests done...');
     }
   }
@@ -287,16 +287,16 @@ udManager.prototype._requestPushAndDownload = function (path, downloadRequest, c
       logger.verbose('  [C1] ' + data.path + ' is in cache: ' + data.status + '| ' + task.offset);
       self.FileDownloadQueue.priorityChange(taskMd5sum, 0);
       callback();
-    } else if ( task.priority === "PREFETCH" ) {
+    } else if (task.priority === 'PREFETCH') {
       self.dataCache.update(taskMd5sum, task);
       self.FileDownloadQueue.push(taskMd5sum, 1, task);
       callback();
-    }else{
+    } else {
       self.dataCache.update(taskMd5sum, task);
       self.FileDownloadQueue.push(taskMd5sum, 0, task);
       callback();
     }
-  }, function(err){
+  }, function(){
     checkRequest();
   });
 };
@@ -327,16 +327,16 @@ udManager.prototype.downloadFileInRange = function(path, offset, size, cb) {
   var self = this;
   var retry = function () {
     self.webStorage.getFileDownload(path, offset, size, function(error, response){
-      if(error){
+      if (error) {
         logger.error('retry, error happened: ' + JSON.stringify(error));
         setTimeout(retry , 800);
-      }else if( !response || !response.data || !response.length){
+      } else if (!response || !response.data || !response.length) {
         logger.error('retry, error response: ' + JSON.stringify(response));
         setTimeout(retry , 800);
-      }else if( size != response.length ){
+      } else if (size != response.length) {
         logger.error('retry, size error: ' + offset + ' ' + size + ' ' + response.length);
         setTimeout(retry , 800);
-      }else{
+      } else {
         cb(error, response);
       }
     });
@@ -346,14 +346,14 @@ udManager.prototype.downloadFileInRange = function(path, offset, size, cb) {
 
 udManager.prototype.downloadFileInMultiRange = function(path, list, cb) {
   var listArray = null;
-  if( typeof list === "string" ){
+  if (typeof list === 'string') {
     try {
       listArray = JSON.parse(list).list;
     } catch (e) {
-      cb("Incorrect download list.", null);
+      cb('Incorrect download list.', null);
       return ;
     }
-  }else{
+  } else {
     listArray = list.list;
   }
   foco.each(listArray, function(index, item, callback){
@@ -363,7 +363,7 @@ udManager.prototype.downloadFileInMultiRange = function(path, list, cb) {
     });
   }, function(){
     cb(null, {
-      data: "OK!"
+      data: 'OK!'
     });
   });
 };
@@ -374,22 +374,22 @@ udManager.prototype.writeDirect = function (path, fd, buffer, offset, length, cb
 
 udManager.prototype.writeCurrentBuffer = function (path, fd, cb) {
   var list = this._openedFileList,
-      new_length = 0,
-      new_offset = 0,
-      new_buffer;
+    newLength = 0,
+    newOffset = 0,
+    newBuffer;
   for (var i in list[fd].writingBlocks) {
-    new_length += list[fd].writingBlocks[i].length;
+    newLength += list[fd].writingBlocks[i].length;
   }
-  new_offset = list[fd].writingBlocks[0].offset;
-  new_buffer = Buffer.concat(list[fd].writingBlocks.map(function (item) {
+  newOffset = list[fd].writingBlocks[0].offset;
+  newBuffer = Buffer.concat(list[fd].writingBlocks.map(function (item) {
     return item.buffer;
   }));
 
-  this.writeDirect(path, fd, new_buffer, new_offset, new_length, cb);
+  this.writeDirect(path, fd, newBuffer, newOffset, newLength, cb);
 };
 
 udManager.prototype.write = function (path, fd, buffer, offset, length, cb) {
-  var list = this._openedFileList, self = this;
+  var list = this._openedFileList;
   if (!list[fd] || list[fd].path !== path) {
     process.nextTick(function () {
       cb({error:'File is not opened yet.'});
@@ -420,7 +420,7 @@ udManager.prototype.write = function (path, fd, buffer, offset, length, cb) {
   });
 
   if (WRITING_BLOCK_NUM === list[fd].writingBlocks.length) {
-    this.writeCurrentBuffer(path, fd, function (error, response) {
+    this.writeCurrentBuffer(path, fd, function (error) {
       list[fd].writingBlocks = [];
       list[fd].uploadedChunk++;
       cb(error, {
