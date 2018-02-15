@@ -9,14 +9,18 @@ if (_IS_WEB) {
       for (var i = 0; i < arguments.length; i++) {
         p.push(arguments[i]);
       }
+      /* eslint-disable no-console */
       console.log(p.join(' '));
+      /* eslint-enable no-console */
     },
     error: function () {
       var p = [];
       for (var i = 0; i < arguments.length; i++) {
         p.push(arguments[i]);
       }
+      /* eslint-disable no-console */
       console.error(p.join(' '));
+      /* eslint-enable no-console */
     },
     verbose: function () {}
   };

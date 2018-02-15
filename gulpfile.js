@@ -6,6 +6,7 @@ var mocha = require('gulp-mocha');
 var browserify = require('browserify');
 var source = require('vinyl-source-stream');
 var connect = require('gulp-connect');
+var eslint = require('gulp-eslint');
 
 const TEST_PATH = 'test/*_test.js';
 const WEB_PATH = 'web/';
@@ -30,5 +31,12 @@ gulp.task('start-web', () => {
   connect.server({
     root: WEB_PATH,
   });
+});
+
+gulp.task('lint', () => {
+  return gulp.src(['**/*.js','!node_modules/**', '!web/unidisk.js'])
+    .pipe(eslint())
+    .pipe(eslint.format())
+    .pipe(eslint.failAfterError());
 });
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+/* global __function,__line */
+
 var fuse = require('fuse-bindings');
 var os = require('os')
 var options = {};  // See parseArgs()
@@ -16,26 +18,26 @@ function getattr(path, cb) {
   udm.getFileMeta(path, function (error, response){
     var stat = {};
     var err = 0; // assume success
-    if( !response.data || !response.data.list){
+    if (!response.data || !response.data.list) {
       err = fuse.ENOENT;
-    }else if( response.data.list[0].isdir == 1 ){
+    } else if (response.data.list[0].isdir == 1) {
       stat.size = 4096;   // standard size of a directory
-      stat.mode = 040770; // directory with 770 permissions
+      stat.mode = 0o40770; // directory with 770 permissions
       stat.mtime = new Date(response.data.list[0].mtime);
       stat.atime = new Date(response.data.list[0].mtime);
       stat.ctime = new Date(response.data.list[0].ctime);
       stat.uid = process.getuid();
       stat.gid = process.getgid();
-    }else{
+    } else {
       stat.size = response.data.list[0].size;
-      stat.mode = 0100660; // file with 660 permissions
+      stat.mode = 0o100660; // file with 660 permissions
       stat.mtime = new Date(response.data.list[0].mtime);
       stat.atime = new Date(response.data.list[0].mtime);
       stat.ctime = new Date(response.data.list[0].ctime);
       stat.uid = process.getuid();
       stat.gid = process.getgid();
     }
-    cb( err, stat );
+    cb(err, stat);
   });
 }
 
@@ -44,10 +46,10 @@ function readdir(path, cb) {
   udm.getFileList(path, function(error, response){
     var names = [];
     var err = 0; // assume success
-    if( !response.data ){
+    if (!response.data) {
       err = fuse.ENOENT;
-    }else{
-      for(var fp in response.data.list){
+    } else {
+      for (var fp in response.data.list) {
         var filePathSplited = response.data.list[fp].path.split('/');
         var fileName = filePathSplited[filePathSplited.length - 1];
         names.push(fileName);
@@ -68,19 +70,17 @@ function open(path, flags, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path);
   udm.getFileMeta(path, function (error, response){
     var f = toFlag(flags);
-    var stat = {};
-    var fd = 0;
     var err = 0; // assume success
     if (f === 'r') {
-      if( !response.data || !response.data.list){
+      if (!response.data || !response.data.list) {
         err = fuse.ENOENT;
-      }else if( response.data.list[0].isdir === 1 ){
+      } else if (response.data.list[0].isdir === 1) {
         err = fuse.EISDIR;
       }
     } else if (f === 'r+') {
-      if( !response.data || !response.data.list){
+      if (!response.data || !response.data.list) {
         err = fuse.ENOENT;
-      }else if( response.data.list[0].isdir === 1 ){
+      } else if (response.data.list[0].isdir === 1) {
         err = fuse.EISDIR;
       }
     } else if (f === 'w') {
@@ -109,16 +109,16 @@ function read(path, fd, buf, len, offset, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path + ' ' + len);
   udm.getFileMeta(path, function (error, response){
     var err = 0; // assume success
-    if( !response.data || !response.data.list){
+    if (!response.data || !response.data.list) {
       err = fuse.ENOENT;
       cb( err );
-    }else if( response.data.list[0].isdir == 1 ){
+    } else if (response.data.list[0].isdir == 1) {
       // directory
       logger.error('read, is directory', path);
       err = fuse.EPERM;
-      cb( err );
-    }else{
-      udm.downloadFileInRangeByCache(path, buf, offset, len, function(error){
+      cb(err);
+    } else {
+      udm.downloadFileInRangeByCache(path, buf, offset, len, function(){
         cb(len);
       });
     }
@@ -142,7 +142,7 @@ function write(path, fd, buffer, length, position, cb) {
 
 function release(path, fd, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path + ' ' + fd);
-  udm.closeFile(path, fd, function (error, response) {
+  udm.closeFile(path, fd, function (error) {
     if (error) {
       logger.error('release error:', error);
       cb(fuse.EPERM);
@@ -162,7 +162,7 @@ function create (path, mode, cb) {
       cb(fuse.EPERM);
     } else {
       fd = response.fd;
-      udm.createEmptyFile(path, function (error, response) {
+      udm.createEmptyFile(path, function (error) {
         if (error) {
           logger.error('create error:', error);
           cb(fuse.EPERM);
@@ -176,7 +176,7 @@ function create (path, mode, cb) {
 
 function unlink(path, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path);
-  udm.deleteFile(path, function (error, response) {
+  udm.deleteFile(path, function (error) {
     if (error) {
       logger.error(error);
       cb(fuse.ENOENT);
@@ -188,7 +188,7 @@ function unlink(path, cb) {
 
 function rename(src, dst, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + src + ' ' + dst);
-  udm.move(src, dst, function (error, response) {
+  udm.move(src, dst, function (error) {
     if (error) {
       logger.error(error);
       cb(fuse.ENOENT);
@@ -200,7 +200,7 @@ function rename(src, dst, cb) {
 
 function mkdir(path, mode, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path + ' ' + mode);
-  udm.createFolder(path, function (error, response) {
+  udm.createFolder(path, function (error) {
     if (error) {
       logger.error(error);
       cb(fuse.ENOENT);
@@ -212,7 +212,7 @@ function mkdir(path, mode, cb) {
 
 function rmdir(path, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path);
-  udm.deleteFolder(path, function (error, response) {
+  udm.deleteFolder(path, function (error) {
     if (error) {
       logger.error(error);
       cb(fuse.ENOENT);
@@ -273,24 +273,24 @@ function setxattr(path, name, buffer, length, offset, flags, cb) {
 function statfs(path, cb) {
   logger.info('[' + __function + ',' + __line + '] ');
   udm.showStat(function(error, response){
-    var block_size = 4096;
-    //f_bsize = block_size;
-    //f_blocks = (fsblkcnt_t) (quota/block_size);
-    //f_bfree = (fsblkcnt_t) ( baidu_data->statistic_cache->f_blocks - ( used / block_size ));
+    var blockSize = 4096;
+    //f_bsize = blockSize;
+    //f_blocks = (fsblkcnt_t) (quota/blockSize);
+    //f_bfree = (fsblkcnt_t) ( baidu_data->statistic_cache->f_blocks - ( used / blockSize ));
     //f_bavail = baidu_data->statistic_cache->f_bfree;     // normal user should has no different
 
     cb(0, {
-        bsize: block_size,
-        //frsize: 1000000,
-        blocks: (response.data.quota / block_size),
-        bfree: ((response.data.quota / block_size) - (response.data.used / block_size) ),
-        bavail: ((response.data.quota / block_size) - (response.data.used / block_size) ),
-        //files: 1000000,
-        //ffree: 1000000,
-        //favail: 1000000,
-        //fsid: 1000000,
-        //flag: 1000000,
-        namemax: 1000
+      bsize: blockSize,
+      //frsize: 1000000,
+      blocks: (response.data.quota / blockSize),
+      bfree: ((response.data.quota / blockSize) - (response.data.used / blockSize) ),
+      bavail: ((response.data.quota / blockSize) - (response.data.used / blockSize) ),
+      //files: 1000000,
+      //ffree: 1000000,
+      //favail: 1000000,
+      //fsid: 1000000,
+      //flag: 1000000,
+      namemax: 1000
     });
   });
 }
@@ -346,6 +346,7 @@ var roHandlers = {
 };
 
 function usage() {
+  /* eslint-disable no-console */
   console.log(
     'Usage: node udFuse.js [options] mountPoint\n' +
     '\n' +
@@ -359,17 +360,18 @@ function usage() {
     'Example:\n' +
     'node udFuse.fs -p Sample -d /tmp/mnt\n'
   );
+  /* eslint-enable no-console */
 }
 
 function parseArgs() {
-  var i, remaining;
+  var i;
   var args = process.argv;
   if (args.length < 3) {
     return false;
   }
   options.mountPoint = args.pop();
 
-  for( i = 2; i < args.length; i++) {
+  for (i = 2; i < args.length; i++) {
     if (args[i] === '-d') {
       options.debugFuse = true;
     } else if (args[i] === '-w') {

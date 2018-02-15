@@ -21,7 +21,7 @@ function str2ab(str) {
 Sample.prototype.init = function (options){
   this._IS_WEB = typeof document !== 'undefined' &&
     typeof window !== 'undefined';
-  var jsonFileName = options.JSONPath, self = this;
+  var jsonFileName = options.JSONPath;
   this._jsonFileName = jsonFileName;
   if (this._IS_WEB) {
     var xmlhttp = new XMLHttpRequest();
@@ -75,8 +75,8 @@ Sample.prototype._findMeta = function (path) {
   var currentNode = this._TEST_DATA[nodes[1]];
   for (var i = 2; i < nodes.length; i++) {
     if (currentNode) {
-       currentNode = currentNode[nodes[i]];
-    }else {
+      currentNode = currentNode[nodes[i]];
+    } else {
       return null;
     }
   }
@@ -114,7 +114,6 @@ Sample.prototype.quota = function (cb){
     data:{
       quota: 2313913630720,
       used: 58410672308,
-      request_id: 1741802854
     }
   });
 };
@@ -158,7 +157,7 @@ Sample.prototype.getFileList = function (path, cb){
   if (meta && meta.isdir === 1) {
     var list = this._findMeta(path);
     var keys = Object.keys(list);
-    for(var i = 0; i < keys.length; i++){
+    for (var i = 0; i < keys.length; i++) {
       var childPath = path + '/' + keys[i];
       childPath = childPath.replace('//', '/', 'gi');
       var childMeta = this._getMeta(childPath);

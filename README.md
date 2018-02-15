@@ -76,7 +76,7 @@ QrlXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ~~~
 $ ./ud.js Dropbox getAccessToken [API_KEY] [API_SECRET] [DEVICE_CODE]
 == Result ====================
-{ access_token: 'QrlXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXYYYYYYYYYYYYYYYYYYYYYYYYYYYY' }
+{ accessToken: 'QrlXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXYYYYYYYYYYYYYYYYYYYYYYYYYYYY' }
 ==============================
 ~~~
 
@@ -106,7 +106,7 @@ DEVICE_CODE
 waiting for verification...
 waiting for verification...
 == Result ====================
-{ access_token: '23.XXXXXXXXXXXXXXXXXXXXXXXXXXXX' }
+{ accessToken: '23.XXXXXXXXXXXXXXXXXXXXXXXXXXXX' }
 ==============================
 ~~~
 

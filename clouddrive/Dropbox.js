@@ -58,7 +58,7 @@ Dropbox.prototype.registerChange = function (){
   }
 
   function repeat(callback) {
-    sendLongPoll(latestCursor, function (error, response) {
+    sendLongPoll(latestCursor, function () {
       getDelta(latestCursor, function (error, response){
         var delta = response.data;
         getLatestCursor(function (error, response) {
@@ -186,7 +186,7 @@ Dropbox.prototype.getFileList = function (path, cb){
       if (response.data) {
         var data = response.data;
         var resultList = [];
-        for(var i = 0; i < data.contents.length; i++){
+        for (var i = 0; i < data.contents.length; i++) {
           var content = data.contents[i];
           resultList.push(self._convertItem(content));
         }
@@ -269,12 +269,12 @@ Dropbox.prototype.writeFileData = function (path, fd, buffer, offset, length, cb
     return;
   }
 
-  var currentFile = pendingData[fd], upload_id, requestParam = '';
+  var currentFile = pendingData[fd], uploadId, requestParam = '';
   var xmlhttp = new this.XHR();
 
   if (currentFile.blocks.length > 0) {
-    upload_id = currentFile.blocks[currentFile.blocks.length -1];
-    requestParam += '?' + 'upload_id=' + upload_id;
+    uploadId = currentFile.blocks[currentFile.blocks.length -1];
+    requestParam += '?' + 'upload_id=' + uploadId;
     requestParam += '&' + 'offset=' + offset;
   }
   var url = 'https://content.dropboxapi.com/1/chunked_upload' + requestParam;
@@ -318,7 +318,7 @@ Dropbox.prototype.commitFileData = function (path, fd, cb){
     return;
   }
 
-  var currentFile = pendingData[fd], upload_id, requestParam = '';
+  var currentFile = pendingData[fd];
 
   var strParams = 'upload_id=' + encodeURIComponent(currentFile.blocks[currentFile.blocks.length -1])
                 + '&autorename=false';
@@ -328,14 +328,8 @@ Dropbox.prototype.commitFileData = function (path, fd, cb){
   xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
   xmlhttp.onload = function (){
     self._handleJson(xmlhttp, function (error, response){
-      if (response.data) {
-        var data = response.data;
-        pendingData[fd] = null;
-        cb(error, response);
-      } else {
-        pendingData[fd] = null;
-        cb(error, response);
-      }
+      pendingData[fd] = null;
+      cb(error, response);
     });
   };
   xmlhttp.send(strParams);
@@ -351,12 +345,7 @@ Dropbox.prototype.deleteFile = function (path, cb){
   xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
   xmlhttp.onload = function (){
     self._handleJson(xmlhttp, function (error, response){
-      if (response.data) {
-        var data = response.data;
-        cb(error, response);
-      } else {
-        cb(error, response);
-      }
+      cb(error, response);
     });
   };
   xmlhttp.send(strParams);
@@ -376,12 +365,7 @@ Dropbox.prototype.createFolder = function (path, cb){
   xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
   xmlhttp.onload = function (){
     self._handleJson(xmlhttp, function (error, response){
-      if (response.data) {
-        var data = response.data;
-        cb(error, response);
-      } else {
-        cb(error, response);
-      }
+      cb(error, response);
     });
   };
   xmlhttp.send(strParams);
@@ -402,9 +386,6 @@ Dropbox.prototype.move = function (src, dst, cb){
         cb({
           error: 'The source file wasn\'t found at the specified path.'
         }, response);
-      } else if (response.data) {
-        var data = response.data;
-        cb(error, response);
       } else {
         cb(error, response);
       }
@@ -420,9 +401,9 @@ client_id=<API_KEY>&
 response_type=code
 */
 
-Dropbox.prototype.getAuthLink = function (api_key, cb){
+Dropbox.prototype.getAuthLink = function (apiKey, cb){
   var link = 'https://www.dropbox.com/1/oauth2/authorize?' +
-    'client_id=' + api_key + '&' +
+    'client_id=' + apiKey + '&' +
     'response_type=code';
   cb(null, {data: {
     authLink: link
@@ -443,12 +424,12 @@ Response:
   "uid": "??????"
 }
 */
-Dropbox.prototype.getAccessToken = function (api_key, api_secret, device_code, cb){
+Dropbox.prototype.getAccessToken = function (apiKey, apiSecret, deviceCode, cb){
   var self = this;
-  var linkToken = 'https://' + api_key + ':' + api_secret + '@' +
+  var linkToken = 'https://' + apiKey + ':' + apiSecret + '@' +
     'api.dropbox.com/1/oauth2/token';
   var params = {
-    'code': device_code,
+    'code': deviceCode,
     'grant_type': 'authorization_code'
   };
   var strParams = 'code=' + encodeURIComponent(params.code) +
@@ -464,7 +445,7 @@ Dropbox.prototype.getAccessToken = function (api_key, api_secret, device_code, c
         var data = response.data;
         var result = {
           data:{
-            access_token: data.access_token
+            accessToken: data.access_token
           }
         };
         cb(error, result);

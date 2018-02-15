@@ -24,11 +24,11 @@ DiskDataStore.prototype.deleteEntry = function (key){
 
 DiskDataStore.prototype.readEntry =
   function (key, targetBuffer, targetOffset, sourceOffset, length){
-  var fileName = this.retrieveFileName(key);
-  var fd = fs.openSync(fileName, 'rs');
-  fs.readSync(fd, targetBuffer, targetOffset, length, sourceOffset);
-  fs.closeSync(fd);
-};
+    var fileName = this.retrieveFileName(key);
+    var fd = fs.openSync(fileName, 'rs');
+    fs.readSync(fd, targetBuffer, targetOffset, length, sourceOffset);
+    fs.closeSync(fd);
+  };
 
 DiskDataStore.prototype.writeEntry = function (key, data, cb){
   var fileName = this.retrieveFileName(key);

@@ -6,6 +6,7 @@
   "scripts": {
     "build-web": "node node_modules/gulp/bin/gulp.js build-web",
     "start-web": "node node_modules/gulp/bin/gulp.js start-web",
+    "lint": "node node_modules/gulp/bin/gulp.js lint",
     "test": "node node_modules/gulp/bin/gulp.js test"
   },
   "author": "Wei-Lun Lee (Sean)",
@@ -22,6 +23,7 @@
     "chai": "^3.5.0",
     "gulp": "^3.9.1",
     "gulp-connect": "^5.2.0",
+    "gulp-eslint": "^4.0.2",
     "gulp-mocha": "^2.2.0",
     "gutil": "^1.6.4",
     "vinyl-source-stream": "^2.0.0"
