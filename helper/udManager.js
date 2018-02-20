@@ -81,9 +81,9 @@ udManager.prototype.showStat = function (cb) {
   retry();
 };
 
-udManager.prototype.createEmptyFile = function (path, cb) {
+udManager.prototype.createEmptyFile = function (path, fd, cb) {
   var self = this;
-  this.webStorage.createEmptyFile(path, function (error, response) {
+  this.webStorage.createEmptyFile(path, fd, function (error, response) {
     if (!error) {
       self.metaCache.clear('/', true);
       self.dataCache.clear('/', true);

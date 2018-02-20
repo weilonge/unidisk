@@ -163,7 +163,7 @@ Dropbox.prototype._convertItem = function (data){
 Dropbox.prototype.getFileMeta = function (path, cb){
   var self = this;
   if (path === '/') {
-    setTimeout(function () {
+    process.nextTick(function () {
       cb(null, {
         data: {
           list: [self._convertItem({
@@ -270,26 +270,38 @@ Dropbox.prototype.openFile = function (path, flags, fd, cb) {
     pendingData[fd] = {
       path: path,
       flags: flags,
-      blocks: []
+      sessionId: null,
+      uploadedOffset: 0
     };
+    console.log(this._writePendingData);
     cb(null, null);
   }
 };
 
-Dropbox.prototype.createEmptyFile = function (path, cb){
+Dropbox.prototype.createEmptyFile = function (path, fd, cb){
   var self = this;
+  var pendingData = this._writePendingData;
+  var currentFile = pendingData[fd];
+  if (!currentFile) {
+    process.nextTick(function () {
+      cb({error: 'File is not opened yet:' + path + ' ' + fd});
+    });
+    return;
+  }
   var xmlhttp = new this.XHR();
-  // TODO
-  xmlhttp.open('put', 'https://content.dropboxapi.com/1/files_put/auto' + encodeURIComponent(path), true);
+  xmlhttp.open('post', 'https://content.dropboxapi.com/2/files/upload_session/start', true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
-  xmlhttp.setRequestHeader('Content-Length', 0);
+  xmlhttp.setRequestHeader('Dropbox-API-Arg', JSON.stringify({'close': false}));
+  xmlhttp.setRequestHeader('Content-Type', 'application/octet-stream');
   xmlhttp.onload = function () {
+    console.log(xmlhttp.responseText);
     self._handleJson(xmlhttp, function (error, response){
       if (response.data) {
         var data = response.data;
         var result = {
           data: data
         };
+        currentFile.sessionId = data.session_id;
         cb(error, result);
       } else {
         cb(error, response);
@@ -303,29 +315,32 @@ Dropbox.prototype.createEmptyFile = function (path, cb){
 Dropbox.prototype.writeFileData = function (path, fd, buffer, offset, length, cb){
   var self = this;
   var pendingData = this._writePendingData;
-  if (!pendingData[fd]) {
-    cb({error: 'File is not opened yet.'});
+  var currentFile = pendingData[fd];
+  if (!currentFile) {
+    process.nextTick(function () {
+      cb({error: 'File is not opened yet:' + path + ' ' + fd});
+    });
     return;
   }
 
-  var currentFile = pendingData[fd], uploadId, requestParam = '';
   var xmlhttp = new this.XHR();
-
-  if (currentFile.blocks.length > 0) {
-    uploadId = currentFile.blocks[currentFile.blocks.length -1];
-    requestParam += '?' + 'upload_id=' + uploadId;
-    requestParam += '&' + 'offset=' + offset;
-  }
-  // TODO
-  var url = 'https://content.dropboxapi.com/1/chunked_upload' + requestParam;
-  xmlhttp.open('put', url, true);
+  xmlhttp.open('post', 'https://content.dropboxapi.com/2/files/upload_session/append_v2', true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
+  xmlhttp.setRequestHeader('Dropbox-API-Arg', JSON.stringify({
+    'cursor': {
+      'session_id': currentFile.sessionId,
+      'offset': offset
+    },
+    'close': false
+  }));
+  xmlhttp.setRequestHeader('Content-Type', 'application/octet-stream');
   xmlhttp.onload = function () {
+    console.log(xmlhttp.responseText);
     self._handleJson(xmlhttp, function (error, response){
       if (response.data) {
         var data = response.data;
-        currentFile.blocks.push(data.upload_id);
         data.length = length;
+        currentFile.uploadedOffset = offset + length;
         var result = {
           data: data
         };
@@ -340,16 +355,17 @@ Dropbox.prototype.writeFileData = function (path, fd, buffer, offset, length, cb
 };
 
 Dropbox.prototype.commitFileData = function (path, fd, cb){
-  var pendingData = this._writePendingData, self = this;
-
-  if (!pendingData[fd]) {
+  var self = this;
+  var pendingData = this._writePendingData;
+  var currentFile = pendingData[fd];
+  if (!currentFile) {
     process.nextTick(function () {
       cb({error: 'File is not opened yet:' + path + ' ' + fd});
     });
     return;
   }
 
-  if (pendingData[fd].blocks.length === 0) {
+  if (!currentFile.sessionId) {
     process.nextTick(function () {
       logger.info('commitFileData with no blocks');
       pendingData[fd] = null;
@@ -358,22 +374,30 @@ Dropbox.prototype.commitFileData = function (path, fd, cb){
     return;
   }
 
-  var currentFile = pendingData[fd];
-
-  var strParams = 'upload_id=' + encodeURIComponent(currentFile.blocks[currentFile.blocks.length -1])
-                + '&autorename=false';
   var xmlhttp = new this.XHR();
-  // TODO
-  xmlhttp.open('post', 'https://content.dropboxapi.com/1/commit_chunked_upload/auto' + encodeURIComponent(path), true);
+  xmlhttp.open('post', 'https://content.dropboxapi.com/2/files/upload_session/finish', true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
-  xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  xmlhttp.setRequestHeader('Dropbox-API-Arg', JSON.stringify({
+    'cursor': {
+      'session_id': currentFile.sessionId,
+      'offset': currentFile.uploadedOffset
+    },
+    'commit': {
+      'path': path,
+      'mode': 'overwrite',
+      'autorename': false,
+      'mute': false
+    }
+  }));
+  xmlhttp.setRequestHeader('Content-Type', 'application/octet-stream');
   xmlhttp.onload = function (){
+    console.log(xmlhttp.responseText);
     self._handleJson(xmlhttp, function (error, response){
       pendingData[fd] = null;
       cb(error, response);
     });
   };
-  xmlhttp.send(strParams);
+  xmlhttp.send();
 };
 
 Dropbox.prototype.deleteFile = function (path, cb){

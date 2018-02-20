@@ -152,7 +152,7 @@ function release(path, fd, cb) {
   });
 }
 
-function create (path, mode, cb) {
+function create(path, mode, cb) {
   logger.info('[' + __function + ',' + __line + '] ' + path);
   var f = toFlag(mode);
   var fd;
@@ -162,7 +162,7 @@ function create (path, mode, cb) {
       cb(fuse.EPERM);
     } else {
       fd = response.fd;
-      udm.createEmptyFile(path, function (error) {
+      udm.createEmptyFile(path, fd, function (error) {
         if (error) {
           logger.error('create error:', error);
           cb(fuse.EPERM);
