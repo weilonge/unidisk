@@ -26,35 +26,45 @@ Dropbox.prototype.registerChange = function (){
   var latestCursor;
   function getLatestCursor(callback) {
     var xmlhttp = new self.XHR();
-    xmlhttp.open('post', 'https://api.dropboxapi.com/1/delta/latest_cursor', true);
+    xmlhttp.open('post', 'https://api.dropboxapi.com/2/files/list_folder/get_latest_cursor', true);
     xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
-    xmlhttp.setRequestHeader('Accept', 'application/json');
+    xmlhttp.setRequestHeader('Content-Type', 'application/json');
     xmlhttp.onload = function () {
       self._handleJson(xmlhttp, callback);
     };
-    xmlhttp.send();
+    xmlhttp.send(JSON.stringify({
+      'path': '',
+      'recursive': true,
+      'include_media_info': false,
+      'include_deleted': false,
+      'include_has_explicit_shared_members': false,
+      'include_mounted_folders': true
+    }));
   }
 
   function sendLongPoll(cursor, callback) {
     var xmlhttp = new self.XHR();
-    xmlhttp.open('get', 'https://notify.dropboxapi.com/1/longpoll_delta?cursor=' + cursor, true);
-    xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
-    xmlhttp.setRequestHeader('Accept', 'application/json');
+    xmlhttp.open('post', 'https://notify.dropboxapi.com/2/files/list_folder/longpoll', true);
+    xmlhttp.setRequestHeader('Content-Type', 'application/json');
     xmlhttp.onload = function () {
       self._handleJson(xmlhttp, callback);
     };
-    xmlhttp.send();
+    xmlhttp.send(JSON.stringify({
+      'cursor': cursor
+    }));
   }
 
   function getDelta(cursor, callback) {
     var xmlhttp = new self.XHR();
-    xmlhttp.open('post', 'https://api.dropboxapi.com/1/delta?cursor=' + cursor, true);
+    xmlhttp.open('post', 'https://api.dropboxapi.com/2/files/list_folder/continue', true);
     xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
-    xmlhttp.setRequestHeader('Accept', 'application/json');
+    xmlhttp.setRequestHeader('Content-Type', 'application/json');
     xmlhttp.onload = function () {
       self._handleJson(xmlhttp, callback);
     };
-    xmlhttp.send();
+    xmlhttp.send(JSON.stringify({
+      'cursor': cursor
+    }));
   }
 
   function repeat(callback) {
@@ -101,7 +111,7 @@ Dropbox.prototype._handleJson = function (xmlhttp, cb){
         error: 'parsing failed.'
       }, response);
     }
-  } else if (xmlhttp.status == 404){
+  } else if (xmlhttp.status == 404 || xmlhttp.status == 409){
     cb(null, response); // File not found
   } else {
     cb({
@@ -113,17 +123,16 @@ Dropbox.prototype._handleJson = function (xmlhttp, cb){
 Dropbox.prototype.quota = function (cb){
   var self = this;
   var xmlhttp = new this.XHR();
-  xmlhttp.open('get', 'https://api.dropbox.com/1/account/info', true);
+  xmlhttp.open('post', 'https://api.dropboxapi.com/2/users/get_space_usage', true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
-  xmlhttp.setRequestHeader('Accept', 'application/json');
   xmlhttp.onload = function () {
     self._handleJson(xmlhttp, function (error, response){
       if (response.data) {
-        var quotaInfo = response.data.quota_info;
+        var quotaInfo = response.data;
         var result = {
           data:{
-            quota: quotaInfo.quota,
-            used: (quotaInfo.normal + quotaInfo.shared)
+            quota: quotaInfo.allocation.allocated,
+            used: quotaInfo.used
           }
         };
         cb(error, result);
@@ -137,25 +146,39 @@ Dropbox.prototype.quota = function (cb){
 };
 
 Dropbox.prototype._convertItem = function (data){
+  let isFolder = data['.tag'] === 'folder';
   return {
-    isdir: data.is_dir ? 1 : 0,
-    path: data.path,
-    size: data.bytes,
+    isdir: isFolder ? 1 : 0,
+    path: data.path_lower,
+    size: isFolder ? 0 : data.size,
     // Date format:
     // "%a, %d %b %Y %H:%M:%S %z"
     //
     // Example: "Sat, 21 Aug 2010 22:31:20 +0000"
-    mtime: new Date(data.modified).getTime(),
-    ctime: new Date(data.modified).getTime()
+    mtime: new Date(0).getTime(),
+    ctime: new Date(0).getTime()
   };
 };
 
 Dropbox.prototype.getFileMeta = function (path, cb){
   var self = this;
+  if (path === '/') {
+    setTimeout(function () {
+      cb(null, {
+        data: {
+          list: [self._convertItem({
+            '.tag': 'folder',
+            'path_lower': '/'
+          })]
+        }
+      });
+    }, 0);
+    return;
+  }
   var xmlhttp = new this.XHR();
-  xmlhttp.open('get', 'https://api.dropbox.com/1/metadata/auto' + encodeURIComponent(path), true);
+  xmlhttp.open('post', 'https://api.dropboxapi.com/2/files/get_metadata', true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
-  xmlhttp.setRequestHeader('Accept', 'application/json');
+  xmlhttp.setRequestHeader('Content-Type', 'application/json');
   xmlhttp.onload = function () {
     self._handleJson(xmlhttp, function (error, response){
       if (response.data) {
@@ -172,22 +195,27 @@ Dropbox.prototype.getFileMeta = function (path, cb){
     });
   };
 
-  xmlhttp.send('list=false');
+  xmlhttp.send(JSON.stringify({
+    'path': path === '/' ? '' : path,
+    'include_media_info': false,
+    'include_deleted': false,
+    'include_has_explicit_shared_members': false
+  }));
 };
 
 Dropbox.prototype.getFileList = function (path, cb){
   var self = this;
   var xmlhttp = new this.XHR();
-  xmlhttp.open('get', 'https://api.dropbox.com/1/metadata/auto' + encodeURIComponent(path), true);
+  xmlhttp.open('post', 'https://api.dropboxapi.com/2/files/list_folder', true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
-  xmlhttp.setRequestHeader('Accept', 'application/json');
+  xmlhttp.setRequestHeader('Content-Type', 'application/json');
   xmlhttp.onload = function () {
     self._handleJson(xmlhttp, function (error, response){
       if (response.data) {
         var data = response.data;
         var resultList = [];
-        for (var i = 0; i < data.contents.length; i++) {
-          var content = data.contents[i];
+        for (var i = 0; i < data.entries.length; i++) {
+          var content = data.entries[i];
           resultList.push(self._convertItem(content));
         }
         var result = {
@@ -202,15 +230,25 @@ Dropbox.prototype.getFileList = function (path, cb){
     });
   };
 
-  xmlhttp.send('list=true');
+  xmlhttp.send(JSON.stringify({
+    'path': path === '/' ? '' : path,
+    'recursive': false,
+    'include_media_info': false,
+    'include_deleted': false,
+    'include_has_explicit_shared_members': false,
+    'include_mounted_folders': true
+  }));
 };
 
 Dropbox.prototype.getFileDownload = function (path, offset, size, cb){
   var self = this;
   var xmlhttp = new this.XHR();
-  xmlhttp.open('get', 'https://api-content.dropbox.com/1/files/auto' + encodeURIComponent(path), true);
+  xmlhttp.open('post', 'https://content.dropboxapi.com/2/files/download', true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
   xmlhttp.setRequestHeader('Range', 'bytes=' + offset + '-' + ( offset + size - 1 ));
+  xmlhttp.setRequestHeader('Dropbox-API-Arg', JSON.stringify({
+    'path': path === '/' ? '' : path
+  }));
   xmlhttp.responseType = this._IS_WEB ? 'arraybuffer' : 'buffer';
   xmlhttp.onload = function () {
     var res = xmlhttp.response;
@@ -241,6 +279,7 @@ Dropbox.prototype.openFile = function (path, flags, fd, cb) {
 Dropbox.prototype.createEmptyFile = function (path, cb){
   var self = this;
   var xmlhttp = new this.XHR();
+  // TODO
   xmlhttp.open('put', 'https://content.dropboxapi.com/1/files_put/auto' + encodeURIComponent(path), true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
   xmlhttp.setRequestHeader('Content-Length', 0);
@@ -277,6 +316,7 @@ Dropbox.prototype.writeFileData = function (path, fd, buffer, offset, length, cb
     requestParam += '?' + 'upload_id=' + uploadId;
     requestParam += '&' + 'offset=' + offset;
   }
+  // TODO
   var url = 'https://content.dropboxapi.com/1/chunked_upload' + requestParam;
   xmlhttp.open('put', url, true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
@@ -323,6 +363,7 @@ Dropbox.prototype.commitFileData = function (path, fd, cb){
   var strParams = 'upload_id=' + encodeURIComponent(currentFile.blocks[currentFile.blocks.length -1])
                 + '&autorename=false';
   var xmlhttp = new this.XHR();
+  // TODO
   xmlhttp.open('post', 'https://content.dropboxapi.com/1/commit_chunked_upload/auto' + encodeURIComponent(path), true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
   xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
@@ -337,18 +378,18 @@ Dropbox.prototype.commitFileData = function (path, fd, cb){
 
 Dropbox.prototype.deleteFile = function (path, cb){
   var self = this;
-  var strParams = 'path=' + encodeURIComponent(path)
-                + '&root=auto';
   var xmlhttp = new this.XHR();
-  xmlhttp.open('post', 'https://api.dropboxapi.com/1/fileops/delete', true);
+  xmlhttp.open('post', 'https://api.dropboxapi.com/2/files/delete_v2', true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
-  xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  xmlhttp.setRequestHeader('Content-Type', 'application/json');
   xmlhttp.onload = function (){
     self._handleJson(xmlhttp, function (error, response){
       cb(error, response);
     });
   };
-  xmlhttp.send(strParams);
+  xmlhttp.send(JSON.stringify({
+    'path': path
+  }));
 };
 
 Dropbox.prototype.deleteFolder = function (path, cb){
@@ -357,29 +398,27 @@ Dropbox.prototype.deleteFolder = function (path, cb){
 
 Dropbox.prototype.createFolder = function (path, cb){
   var self = this;
-  var strParams = 'path=' + encodeURIComponent(path)
-                + '&root=auto';
   var xmlhttp = new this.XHR();
-  xmlhttp.open('post', 'https://api.dropboxapi.com/1/fileops/create_folder', true);
+  xmlhttp.open('post', 'https://api.dropboxapi.com/2/files/create_folder_v2', true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
-  xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  xmlhttp.setRequestHeader('Content-Type', 'application/json');
   xmlhttp.onload = function (){
     self._handleJson(xmlhttp, function (error, response){
       cb(error, response);
     });
   };
-  xmlhttp.send(strParams);
+  xmlhttp.send(JSON.stringify({
+    'path': path,
+    'autorename': false
+  }));
 };
 
 Dropbox.prototype.move = function (src, dst, cb){
   var self = this;
-  var strParams = 'from_path=' + encodeURIComponent(src)
-                + '&to_path=' + encodeURIComponent(dst)
-                + '&root=auto';
   var xmlhttp = new this.XHR();
-  xmlhttp.open('post', 'https://api.dropboxapi.com/1/fileops/move', true);
+  xmlhttp.open('post', 'https://api.dropboxapi.com/2/files/move_v2', true);
   xmlhttp.setRequestHeader('Authorization', 'Bearer ' + self.USERTOKEN);
-  xmlhttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  xmlhttp.setRequestHeader('Content-Type', 'application/json');
   xmlhttp.onload = function (){
     self._handleJson(xmlhttp, function (error, response){
       if (xmlhttp.status === 404) {
@@ -391,7 +430,13 @@ Dropbox.prototype.move = function (src, dst, cb){
       }
     });
   };
-  xmlhttp.send(strParams);
+  xmlhttp.send(JSON.stringify({
+    'from_path': src,
+    'to_path': dst,
+    'allow_shared_folder': false,
+    'autorename': false,
+    'allow_ownership_transfer': false
+  }));
 };
 
 /*

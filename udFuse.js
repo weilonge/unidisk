@@ -411,7 +411,6 @@ function parseArgs() {
     if (IS_OSX) {
       handlers.options.push('iosize=' + FUSE_IOSIZE);
       handlers.options.push('volname=' + 'Unidisk-' + options.module);
-      handlers.options.push('local');
     }
     handlers.options.push('fsname=' + 'Unidisk-' + options.module);
     try {

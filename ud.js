@@ -6,15 +6,17 @@
 var udUtility = require('./helper/cmdWrapper');
 var path = require('path');
 var logger = require('./helper/log');
+var Settings = require('./helper/Settings');
 
 function showHelp(exeName){
   /* eslint-disable no-console */
   console.log(
     '-- Universal Drive --\n' +
-    'Usage: ' + exeName + ' MODULE COMMAND [P1] [P2]\n' +
-    '     MODULE: command of udManager or other cloud storage APIs.\n' +
+    'Usage: ' + exeName + ' PROFILE COMMAND [P1] [P2]\n' +
+    '     PROFILE: profile name.\n' +
+    '     COMMAND: the invoking API name.\n' +
     '\n' +
-    'Example: ' + exeName + ' quota\n'
+    'Example: ' + exeName + ' myDropbox getFileList /\n'
   );
   /* eslint-enable no-console */
 }
@@ -40,8 +42,18 @@ var moduleSet = {
   udManager: require('./helper/udManager')
 };
 
-var ret = udUtility.invokeCommand(process.argv.slice(3),
-  new moduleSet[process.argv[2]](), 1, cccb);
+var profileName = process.argv[2];
+var profile = Settings.getProfile(profileName);
+
+if (!profile) {
+  logger.error('Invalid profile');
+  process.exit(1);
+}
+
+var cmdAndOpts = process.argv.slice(3);
+
+var ret = udUtility.invokeCommand(profile, cmdAndOpts,
+  new moduleSet[profile.module](), 1, cccb);
 
 if (0 !== ret) {
   showHelp(path.basename(process.argv[1]));

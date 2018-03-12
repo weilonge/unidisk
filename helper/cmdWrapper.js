@@ -3,7 +3,7 @@
  **/
 
 // argv = [ cmd, p1, p2, ...]
-exports.invokeCommand = function (argv, commandSet, ignoreArgNum, cb){
+exports.invokeCommand = function (profile, argv, commandSet, ignoreArgNum, cb){
   if (1 > argv.length) {
     return '(1) Need more arguments.';
   }
@@ -16,7 +16,7 @@ exports.invokeCommand = function (argv, commandSet, ignoreArgNum, cb){
     return '(2) Cannot find this command - ' + cmd;
   }
 
-  if (funcP.length !== argv.length) {
+  if (funcP.length !== argv.length && funcP.length !== 0) {
     return '(3) Arguments amount incorrect - cmd "' + cmd + '" needs ' + funcP.length + ' arguments.';
   }
 
@@ -28,7 +28,7 @@ exports.invokeCommand = function (argv, commandSet, ignoreArgNum, cb){
   cmdArgv.push(cb);
   // argv = [ cmd, p1, p2] >>> functionSet.cmd(p1, p2, callback);
   if (funcS.init) {
-    funcS.init({});
+    funcS.init(profile);
   }
   funcP.apply(funcS, cmdArgv);
   return 0;
