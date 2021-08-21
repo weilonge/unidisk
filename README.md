@@ -4,7 +4,7 @@ This project can help you to use Cloud Storage in a new way and provide the foll
 
 *   Available storages
 
-    *   JSON FS, Dropbox, BaiduYun
+    *   JSON FS, Dropbox
 
 *   Data/Meta Cache to improve response time
 
@@ -39,7 +39,7 @@ $ mkdir ~/.unidisk && cp dist/settings.json.SAMPLE ~/.unidisk/settings.json
 
 ## Let's start
 
-unidisk supports three kinds of storage to access: SampleJSON FS, Dropbox, and BaiduYun. The following instructions will guide you how to use them.
+unidisk supports three kinds of storage to access: SampleJSON FS and Dropbox. The following instructions will guide you how to use them.
 
 ### Sample JSON FS
 
@@ -90,36 +90,6 @@ token: "QrlXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXYYYYYYYYYYYYYYYYYYYYYYYYYYYY"
 
 ~~~
 $ ./udFuse.js -p MyDropbox [mount point]
-~~~
-
-*   The storage is ready at the mount point you gave.
-
-### BaiduYun
-
-*   Please apply a BaiduYun development account, and keep your `API_KEY` and `API_SECRET`
-*   Use this command to get the authrization link and browser the link then login your account and input `DEVICE_CODE`:
-
-~~~
-$ ./ud.js pcs getAccessToken [API_KEY] [API_SECRET]
-https://openapi.baidu.com/device
-DEVICE_CODE
-waiting for verification...
-waiting for verification...
-== Result ====================
-{ accessToken: '23.XXXXXXXXXXXXXXXXXXXXXXXXXXXX' }
-==============================
-~~~
-
-*   Edit `~/.unidisk/settings.json` and add the line in your PCS profile (e.g. MyPCS):
-
-~~~
-token: "23.XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-~~~
-
-*   Use this command to mount BaiduYun PCS:
-
-~~~
-$ ./udFuse.js -p MyPCS [mount point]
 ~~~
 
 *   The storage is ready at the mount point you gave.

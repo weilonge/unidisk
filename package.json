@@ -13,15 +13,13 @@
   "dependencies": {
     "foco": "^1.1.0",
     "fs-extra": "^0.30.0",
-    "fuse-bindings": "^2.1.2",
-    "unirest": "^0.5.1",
+    "fuse-native": "^2.2.6",
     "winston": "^2.2.0",
     "xhr2": "^0.1.2"
   },
   "devDependencies": {
-    "browserify": "^16.1.0",
     "chai": "^3.5.0",
-    "gulp": "^4.0.0",
+    "gulp": "^4.0.2",
     "gulp-connect": "^5.5.0",
     "gulp-eslint": "^4.0.2",
     "gulp-mocha": "^6.0.0",

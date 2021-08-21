@@ -10,9 +10,6 @@ var UnidiskHelper = {
     case 'Dropbox':
       storageMod = require('../clouddrive/Dropbox');
       break;
-    case 'BaiduYun':
-      storageMod = require('../clouddrive/pcs');
-      break;
     }
     var udm = new udManager();
     udm.init({

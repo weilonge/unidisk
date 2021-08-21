@@ -12,12 +12,6 @@
       "cacheStore": "memory",
       "token": "EXAMPLE_TOKEN"
     },
-    "MyPCS": {
-      "type": "mount",
-      "module": "pcs",
-      "cacheStore": "memory",
-      "token": "EXAMPLE_TOKEN"
-    },
     "Sample": {
       "type": "mount",
       "module": "Sample",

@@ -37,7 +37,6 @@ if ('--help' === process.argv[2] || '-h' === process.argv[2]) {
 }
 
 var moduleSet = {
-  pcs: require('./clouddrive/pcs'),
   Dropbox: require('./clouddrive/Dropbox'),
   udManager: require('./helper/udManager')
 };
