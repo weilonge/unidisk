@@ -1,0 +1,8 @@
+{
+  "hello.txt": "Hello from UniDisk!\n",
+  "readme.txt": "UniDisk mounts cloud storage as a local filesystem.\n",
+  "docs": {
+    "getting-started.txt": "1. Install dependencies: npm install\n2. Mount: npx tsx src/udFuse.ts -m Sample /tmp/mnt\n",
+    "architecture.txt": "UniDisk uses block-aligned caching to minimize cloud API calls.\nBlocks are downloaded on demand and prefetched for sequential reads.\n"
+  }
+}
