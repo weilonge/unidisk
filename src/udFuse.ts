@@ -124,7 +124,7 @@ function loadProvider(moduleName: string, profile: ProviderProfile): StorageProv
 
 type FuseHandlers = ConstructorParameters<typeof Fuse>[1]
 
-function buildHandlers(udm: UdManager, writable: boolean): FuseHandlers {
+export function buildHandlers(udm: UdManager, writable: boolean): FuseHandlers {
   const ENOENT = Fuse.ENOENT  // -2
   const EPERM  = Fuse.EPERM   // -1
   const EISDIR = Fuse.EISDIR  // -21
@@ -377,7 +377,10 @@ async function main(): Promise<void> {
   process.once('SIGTERM', () => void shutdown('SIGTERM'))
 }
 
-main().catch(err => {
-  logger.error(`Fatal: ${err}`)
-  process.exit(1)
-})
+// Only run as a CLI when executed directly, not when imported as a module.
+if (require.main === module) {
+  main().catch(err => {
+    logger.error(`Fatal: ${err}`)
+    process.exit(1)
+  })
+}

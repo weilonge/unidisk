@@ -4,6 +4,9 @@
  *
  * Runs independently of Vitest's worker threads to avoid the V8 locking
  * conflict that fuse-native triggers inside worker isolates.
+ *
+ * Uses the production buildHandlers() from src/udFuse.ts so the integration
+ * test exercises the real code path, not a parallel copy.
  */
 
 import fs from 'fs/promises'
@@ -12,6 +15,7 @@ import os from 'os'
 import Fuse from 'fuse-native'
 import { UdManager } from '../src/helper/udManager'
 import { Sample } from '../src/clouddrive/Sample'
+import { buildHandlers } from '../src/udFuse'
 
 const MOUNT_POINT = path.join(os.tmpdir(), 'ud-fuse-test-mnt')
 
@@ -56,93 +60,19 @@ async function assertEqual<T>(actual: T, expected: T, message: string): Promise<
 }
 
 // ---------------------------------------------------------------------------
-// FUSE handlers (same as integration test)
-// ---------------------------------------------------------------------------
-
-function buildHandlers(udm: UdManager): ConstructorParameters<typeof Fuse>[1] {
-  const ENOENT = Fuse.ENOENT
-  const EPERM  = Fuse.EPERM
-  const EISDIR = Fuse.EISDIR
-  const EIO    = Fuse.EIO
-
-  function toFlag(flags: number): 'r' | 'w' | 'r+' {
-    const f = flags & 3
-    if (f === 0) return 'r'
-    if (f === 1) return 'w'
-    return 'r+'
-  }
-
-  return {
-    // fuse-native getattr: cb(err, stat)
-    getattr(filePath: string, cb: (code: number, stat?: object) => void) {
-      udm.getFileMeta(filePath).then(meta => {
-        if (!meta) return cb(ENOENT)
-        if (meta.isdir === 1) {
-          cb(0, {
-            size: 4096, mode: 0o40770, nlink: 1,
-            mtime: new Date(meta.mtime), atime: new Date(meta.mtime), ctime: new Date(meta.ctime),
-            uid: process.getuid!(), gid: process.getgid!(),
-          })
-        } else {
-          cb(0, {
-            size: meta.size, mode: 0o100660, nlink: 1,
-            mtime: new Date(meta.mtime), atime: new Date(meta.mtime), ctime: new Date(meta.ctime),
-            uid: process.getuid!(), gid: process.getgid!(),
-          })
-        }
-      }).catch(() => cb(ENOENT))
-    },
-
-    // fuse-native readdir: cb(err, names)
-    readdir(filePath: string, cb: (code: number, names?: string[]) => void) {
-      udm.getFileList(filePath).then(list => {
-        const names = list.map(e => path.basename(e.path))
-        cb(0, names)
-      }).catch(() => cb(ENOENT))
-    },
-
-    // fuse-native open: cb(err, fd)
-    open(filePath: string, flags: number, cb: (code: number, fd?: number) => void) {
-      const flag = toFlag(flags)
-      udm.getFileMeta(filePath).then(async meta => {
-        if (!meta) { cb(ENOENT); return }
-        if (meta.isdir === 1) { cb(EISDIR); return }
-        const fd = await udm.openFile(filePath, flag)
-        cb(0, fd)
-      }).catch(() => cb(EPERM))
-    },
-
-    // fuse-native read: cb(bytesRead) — first arg is the FUSE return value (bytes read or -errno)
-    // NOT cb(err, bytesRead): that would pass res=0 (EOF) to the kernel regardless of len
-    read(filePath: string, _fd: number, buf: Buffer, len: number, offset: number, cb: (bytesRead: number) => void) {
-      udm.downloadFileInRangeByCache(filePath, buf, offset, len)
-        .then(() => cb(len))
-        .catch(() => cb(EIO))
-    },
-
-    // fuse-native release: cb(err)
-    release(filePath: string, fd: number, cb: (code: number) => void) {
-      udm.closeFile(filePath, fd).then(() => cb(0)).catch(() => cb(EPERM))
-    },
-    // No init handler: fuse-native calls signal(0) itself when ops.init is absent,
-    // which passes a numeric 0 to fuse_native_signal_init (NAPI requires int32, not null/undefined).
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Mount / unmount
 // ---------------------------------------------------------------------------
 
 function mount(mountPoint: string, handlers: ConstructorParameters<typeof Fuse>[1]): Promise<Fuse> {
   return new Promise((resolve, reject) => {
     const fuse = new Fuse(mountPoint, handlers, { force: true, debug: false })
-    fuse.mount((err: Error | null) => err ? reject(err) : resolve(fuse))
+    fuse.mount((err: Error | null) => (err ? reject(err) : resolve(fuse)))
   })
 }
 
 function unmount(fuse: Fuse): Promise<void> {
   return new Promise((resolve, reject) => {
-    fuse.unmount((err: Error | null) => err ? reject(err) : resolve())
+    fuse.unmount((err: Error | null) => (err ? reject(err) : resolve()))
   })
 }
 
@@ -203,6 +133,7 @@ async function runTests(mountPoint: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
+  // Seed the Sample provider with in-memory test data, bypassing file I/O.
   const provider = new Sample()
   ;(provider as unknown as { _testData: typeof SAMPLE_FS })._testData =
     JSON.parse(JSON.stringify(SAMPLE_FS))
@@ -221,8 +152,11 @@ async function main(): Promise<void> {
     maxDataCacheEntries: 20,
   })
 
+  // Use the production handlers from src/udFuse.ts — read-only mode.
+  const handlers = buildHandlers(udm, false)
+
   await fs.mkdir(MOUNT_POINT, { recursive: true })
-  const fuse = await mount(MOUNT_POINT, buildHandlers(udm))
+  const fuse = await mount(MOUNT_POINT, handlers)
   await new Promise(r => setTimeout(r, 300))
 
   try {
