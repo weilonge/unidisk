@@ -16,6 +16,7 @@
  *   npx tsx src/udFuse.ts -p myDropbox -w /tmp/mnt
  */
 
+import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
 import Fuse from 'fuse-native'
@@ -356,6 +357,10 @@ async function main(): Promise<void> {
   // Capture string value so the closure below doesn't need opts to be non-null.
   const { mountPoint } = opts
   const mode = opts.writable ? 'read-write' : 'read-only'
+
+  // Auto-create the mount point directory if it doesn't exist yet.
+  await fs.mkdir(mountPoint, { recursive: true })
+
   logger.info(`Mounting ${mode} at ${mountPoint}`)
 
   const fuse = await mount(mountPoint, handlers, fuseOpts)

@@ -128,6 +128,72 @@ async function runTests(mountPoint: string): Promise<void> {
   }
 }
 
+async function runWriteTests(mountPoint: string): Promise<void> {
+  console.log('\nWrite tests')
+  console.log('=========================================')
+
+  // --- mkdir ---
+  console.log('\nmkdir()')
+  await fs.mkdir(path.join(mountPoint, 'writetest'))
+  const dirStat = await fs.stat(path.join(mountPoint, 'writetest'))
+  assert(dirStat.isDirectory(), 'newly created directory is a directory')
+  const rootAfterMkdir = await fs.readdir(mountPoint)
+  assert(rootAfterMkdir.includes('writetest'), 'new directory appears in parent listing')
+
+  // --- writeFile + read-back ---
+  console.log('\nwriteFile() + readFile()')
+  const content1 = 'Hello from write test!\n'
+  await fs.writeFile(path.join(mountPoint, 'writetest', 'hello.txt'), content1)
+  const readBack1 = await fs.readFile(path.join(mountPoint, 'writetest', 'hello.txt'), 'utf-8')
+  await assertEqual(readBack1, content1, 'written file content round-trips correctly')
+
+  // --- write at root level ---
+  const content2 = 'Root level file\n'
+  await fs.writeFile(path.join(mountPoint, 'newroot.txt'), content2)
+  const readBack2 = await fs.readFile(path.join(mountPoint, 'newroot.txt'), 'utf-8')
+  await assertEqual(readBack2, content2, 'root-level file content round-trips correctly')
+
+  // --- rename ---
+  console.log('\nrename()')
+  await fs.rename(
+    path.join(mountPoint, 'writetest', 'hello.txt'),
+    path.join(mountPoint, 'writetest', 'renamed.txt'),
+  )
+  const renamedContent = await fs.readFile(path.join(mountPoint, 'writetest', 'renamed.txt'), 'utf-8')
+  await assertEqual(renamedContent, content1, 'renamed file preserves content')
+  try {
+    await fs.readFile(path.join(mountPoint, 'writetest', 'hello.txt'))
+    assert(false, 'old path should not exist after rename')
+  } catch (err: unknown) {
+    assert((err as NodeJS.ErrnoException).code === 'ENOENT', 'old path returns ENOENT after rename')
+  }
+
+  // --- unlink ---
+  console.log('\nunlink()')
+  await fs.unlink(path.join(mountPoint, 'writetest', 'renamed.txt'))
+  try {
+    await fs.readFile(path.join(mountPoint, 'writetest', 'renamed.txt'))
+    assert(false, 'unlinked file should not exist')
+  } catch (err: unknown) {
+    assert((err as NodeJS.ErrnoException).code === 'ENOENT', 'unlinked file returns ENOENT')
+  }
+  await fs.unlink(path.join(mountPoint, 'newroot.txt'))
+  const rootAfterUnlink = await fs.readdir(mountPoint)
+  assert(!rootAfterUnlink.includes('newroot.txt'), 'unlinked root file absent from listing')
+
+  // --- rmdir ---
+  console.log('\nrmdir()')
+  await fs.rmdir(path.join(mountPoint, 'writetest'))
+  try {
+    await fs.stat(path.join(mountPoint, 'writetest'))
+    assert(false, 'removed directory should not exist')
+  } catch (err: unknown) {
+    assert((err as NodeJS.ErrnoException).code === 'ENOENT', 'removed directory returns ENOENT')
+  }
+  const rootAfterRmdir = await fs.readdir(mountPoint)
+  assert(!rootAfterRmdir.includes('writetest'), 'removed directory absent from parent listing')
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -152,8 +218,8 @@ async function main(): Promise<void> {
     maxDataCacheEntries: 20,
   })
 
-  // Use the production handlers from src/udFuse.ts — read-only mode.
-  const handlers = buildHandlers(udm, false)
+  // Use the production handlers from src/udFuse.ts — writable mode.
+  const handlers = buildHandlers(udm, true)
 
   await fs.mkdir(MOUNT_POINT, { recursive: true })
   const fuse = await mount(MOUNT_POINT, handlers)
@@ -161,6 +227,7 @@ async function main(): Promise<void> {
 
   try {
     await runTests(MOUNT_POINT)
+    await runWriteTests(MOUNT_POINT)
   } finally {
     await unmount(fuse)
   }
