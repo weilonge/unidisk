@@ -61,10 +61,9 @@ interface TBDownloadEntry {
 
 interface TBDownloadResponse {
   errno: number
-  list?: TBDownloadEntry[]
-  // Some TeraBox API versions return dlinks under data.dlink instead of list
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data?: { dlink?: TBDownloadEntry[] }
+  dlink?: TBDownloadEntry[]        // actual API response (confirmed)
+  list?: TBDownloadEntry[]         // alternative shape seen in some docs
+  data?: { dlink?: TBDownloadEntry[] }  // another alternative shape
 }
 
 interface TBQuotaResponse {
@@ -388,10 +387,9 @@ export class TeraBox extends EventEmitter implements StorageProvider {
       throw new Error(`TeraBox: download API error (errno=${res.errno}) for fs_id=${fsId}`)
     }
 
-    // TeraBox API response shape varies between versions:
-    //   newer: { list: [{ fs_id, dlink }] }
-    //   older: { data: { dlink: [{ fs_id, dlink }] } }
-    const item = res.list?.[0] ?? res.data?.dlink?.[0]
+    // TeraBox API response shape (confirmed): { dlink: [{ fs_id, dlink }] }
+    // Guard against alternative shapes seen in older docs just in case.
+    const item = res.dlink?.[0] ?? res.list?.[0] ?? res.data?.dlink?.[0]
     if (!item?.dlink) {
       logger.error(`TeraBox: no dlink in response for fs_id=${fsId}`)
       logger.verbose(`TeraBox: download response was: ${JSON.stringify(res, null, 2)}`)
