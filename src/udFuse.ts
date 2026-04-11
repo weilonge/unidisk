@@ -68,11 +68,23 @@ function parseArgs(): MountOptions | null {
   opts.mountPoint = mountPoint
 
   if (opts.profileName) {
-    Settings.load()
-    const profile = Settings.getProfile(opts.profileName)
-    opts.profile = profile
-    opts.module  = opts.module ?? profile.module
-    opts.writable = opts.writable || !!profile.writable
+    const p = opts.profileName
+    const isFilePath = p.endsWith('.json') || p.includes('/') || p.includes('\\')
+    if (isFilePath) {
+      // Load profile directly from a JSON file
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const profile = require(path.resolve(p)) as ProviderProfile
+      opts.profile  = profile
+      opts.module   = opts.module ?? (profile as { module?: string }).module
+      opts.writable = opts.writable || !!(profile as { writable?: boolean }).writable
+    } else {
+      // Look up a named profile from ~/.unidisk/settings.json
+      Settings.load()
+      const profile = Settings.getProfile(p)
+      opts.profile  = profile
+      opts.module   = opts.module ?? profile.module
+      opts.writable = opts.writable || !!profile.writable
+    }
   }
 
   if (!opts.module) {
@@ -94,7 +106,8 @@ function usage(): void {
     'Options:\n' +
     '  -d              Enable FUSE debug output.\n' +
     '  -m <module>     Provider module name (e.g. Sample, Dropbox, TeraBox).\n' +
-    '  -p <profile>    Profile name from ~/.unidisk/settings.json.\n' +
+    '  -p <profile>    Path to a profile JSON file, or a profile name from\n' +
+    '                  ~/.unidisk/settings.json.\n' +
     '  -w              Enable write support.\n' +
     '\n' +
     'Example:\n' +
