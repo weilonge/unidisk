@@ -53,6 +53,8 @@ function parseArgs(): MountOptions | null {
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-d') {
       opts.debug = true
+    } else if (args[i] === '-v') {
+      process.env.UD_VERBOSE = '1'
     } else if (args[i] === '-w') {
       opts.writable = true
     } else if (args[i] === '-m') {
@@ -105,6 +107,7 @@ function usage(): void {
     '\n' +
     'Options:\n' +
     '  -d              Enable FUSE debug output.\n' +
+    '  -v              Enable verbose logging.\n' +
     '  -m <module>     Provider module name (e.g. Sample, Dropbox, TeraBox).\n' +
     '  -p <profile>    Path to a profile JSON file, or a profile name from\n' +
     '                  ~/.unidisk/settings.json.\n' +
