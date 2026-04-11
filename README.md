@@ -61,13 +61,14 @@ sudo apt install libfuse2
 
 ### Linux (Raspberry Pi — arm64 or armv7l)
 
-1. Install the FUSE development library and build tools:
+1. Install the FUSE library and build tools:
    ~~~
-   sudo apt install libfuse-dev build-essential
+   sudo apt install libfuse2 libfuse-dev build-essential
    ~~~
-2. Rebuild the native addon:
+2. Install dependencies (the postinstall script automatically patches the bundled
+   x86_64 libfuse with the system arm64 version):
    ~~~
-   npm rebuild fuse-native
+   npm install
    ~~~
 
 ### Prepare settings.json
