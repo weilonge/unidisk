@@ -2,6 +2,7 @@ import { EventEmitter } from 'events'
 import https from 'https'
 import http from 'http'
 import path from 'path'
+import { logger } from '../helper/logger'
 import type {
   StorageProvider,
   ProviderProfile,
@@ -392,8 +393,8 @@ export class TeraBox extends EventEmitter implements StorageProvider {
     //   older: { data: { dlink: [{ fs_id, dlink }] } }
     const item = res.list?.[0] ?? res.data?.dlink?.[0]
     if (!item?.dlink) {
-      // Log the full response so we can identify the actual shape
-      console.error('[TeraBox] _getDlink unexpected response:', JSON.stringify(res, null, 2))
+      logger.error(`TeraBox: no dlink in response for fs_id=${fsId}`)
+      logger.verbose(`TeraBox: download response was: ${JSON.stringify(res, null, 2)}`)
       throw new Error(`TeraBox: no dlink returned for fs_id=${fsId}`)
     }
 
