@@ -3,6 +3,7 @@ import PQueue from 'p-queue'
 import { logger } from './logger'
 import { MetaCache } from './MetaCache'
 import { DataCache } from './DataCache'
+import { RetryableError } from './RetryableError'
 import type {
   StorageProvider,
   ProviderProfile,
@@ -12,11 +13,6 @@ import type {
 
 const MAX_FILE_OPEN_NUM = 1024
 const RETRY_DELAY_MS = 800
-// Longer delay when the CDN explicitly throttles us (errno=424629 "need verify").
-// The TeraBox CDN throttle window is typically 1–5 s; 3 s gives it time to clear
-// without adding unnecessary latency for other transient errors.
-const THROTTLE_RETRY_DELAY_MS = 3000
-const THROTTLE_ERROR_RE = /errno=424629/
 
 interface OpenFileEntry {
   path: string
@@ -264,16 +260,15 @@ export class UdManager extends EventEmitter {
   }
 
   // Generic retry wrapper.
-  // Uses a longer delay when the CDN throttle error (errno=424629) is detected
-  // so the throttle window has time to clear before the next attempt.
+  // If the provider throws a RetryableError it can specify how long to wait;
+  // otherwise the default fixed delay is used.
   private async _fetchWithRetry<T>(fn: () => Promise<T>): Promise<T> {
     // eslint-disable-next-line no-constant-condition
     while (true) {
       try {
         return await fn()
       } catch (err) {
-        const msg = String(err)
-        const delay = THROTTLE_ERROR_RE.test(msg) ? THROTTLE_RETRY_DELAY_MS : RETRY_DELAY_MS
+        const delay = err instanceof RetryableError ? err.retryAfter : RETRY_DELAY_MS
         logger.error(`Retrying after error: ${err}`)
         await new Promise(r => setTimeout(r, delay))
       }

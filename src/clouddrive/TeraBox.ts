@@ -11,6 +11,7 @@ import type {
   DownloadResponse,
   QuotaInfo,
 } from '../types'
+import { RetryableError } from '../helper/RetryableError'
 
 /**
  * TeraBox cloud-storage provider.
@@ -292,9 +293,12 @@ export class TeraBox extends EventEmitter implements StorageProvider {
       try {
         const parsed = JSON.parse(bodyText) as { errno?: number; errmsg?: string }
         if (typeof parsed.errno === 'number' && parsed.errno !== 0) {
-          throw new Error(
-            `TeraBox: CDN errno=${parsed.errno} "${parsed.errmsg ?? ''}" for "${filePath}"`
-          )
+          const msg = `TeraBox: CDN errno=${parsed.errno} "${parsed.errmsg ?? ''}" for "${filePath}"`
+          // errno=424629 ("need verify") is a per-session CDN throttle that
+          // clears within ~1–5 s.  Signal the retry loop to back off longer.
+          throw parsed.errno === 424629
+            ? new RetryableError(msg, 3000)
+            : new Error(msg)
         }
       } catch (parseErr) {
         // Re-throw only errors we constructed above; ignore JSON parse failures.
