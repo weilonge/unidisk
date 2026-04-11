@@ -51,8 +51,9 @@ interface TBListEntry {
 }
 
 interface TBListResponse {
-  errno: number
-  list:  TBListEntry[]
+  errno:    number
+  list:     TBListEntry[]
+  has_more: 0 | 1   // 1 = more pages available
 }
 
 interface TBDownloadEntry {
@@ -225,13 +226,17 @@ export class TeraBox extends EventEmitter implements StorageProvider {
 
   async getFileList(dirPath: string): Promise<{ data: FileMetaData | null }> {
     const app = await this._ensureApp()
-    const res = (await app.getRemoteDir(dirPath)) as TBListResponse
+    const entries: FileEntry[] = []
 
-    if (res.errno !== 0) {
-      return { data: null }
+    for (let page = 1; ; page++) {
+      const res = (await app.getRemoteDir(dirPath, page)) as TBListResponse
+      if (res.errno !== 0) return { data: null }
+
+      for (const e of res.list ?? []) entries.push(this._toFileEntry(e))
+
+      if (!res.has_more) break
     }
 
-    const entries = (res.list ?? []).map(e => this._toFileEntry(e))
     return { data: { list: entries } }
   }
 

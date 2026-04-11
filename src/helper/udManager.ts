@@ -13,6 +13,7 @@ import type {
 
 const MAX_FILE_OPEN_NUM = 1024
 const RETRY_DELAY_MS = 800
+const MAX_RETRY_ATTEMPTS = 10
 
 interface OpenFileEntry {
   path: string
@@ -262,17 +263,21 @@ export class UdManager extends EventEmitter {
   // Generic retry wrapper.
   // If the provider throws a RetryableError it can specify how long to wait;
   // otherwise the default fixed delay is used.
+  // Gives up after MAX_RETRY_ATTEMPTS and re-throws the last error so the
+  // FUSE handler can return EIO instead of hanging the mount indefinitely.
   private async _fetchWithRetry<T>(fn: () => Promise<T>): Promise<T> {
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    let lastErr: unknown
+    for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
       try {
         return await fn()
       } catch (err) {
+        lastErr = err
         const delay = err instanceof RetryableError ? err.retryAfter : RETRY_DELAY_MS
-        logger.error(`Retrying after error: ${err}`)
+        logger.error(`Retrying after error (attempt ${attempt + 1}/${MAX_RETRY_ATTEMPTS}): ${err}`)
         await new Promise(r => setTimeout(r, delay))
       }
     }
+    throw lastErr
   }
 
   // ---- File handle management --------------------------------------------
