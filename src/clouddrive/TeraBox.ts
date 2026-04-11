@@ -133,7 +133,7 @@ function rangeGet(
       })
 
       req.on('error', reject)
-      req.setTimeout(60_000, () => {
+      req.setTimeout(15_000, () => {
         req.destroy(new Error('Request timed out'))
       })
     }
@@ -267,11 +267,16 @@ export class TeraBox extends EventEmitter implements StorageProvider {
     try {
       data = await rangeGet(dlink, extraHeaders, 10)
     } catch (err) {
-      // dlink may have expired — evict so next call gets a fresh one
-      this._dlinkCache.delete(fsId)
-      throw new Error(
-        `TeraBox: download failed for "${filePath}": ${(err as Error).message}`
-      )
+      const msg = (err as Error).message
+      // Evict the cached dlink only for HTTP auth/permission errors (4xx/5xx).
+      // Transient network failures (socket hang up, timeout, ETIMEDOUT) do NOT
+      // mean the dlink itself has expired — evicting it on every network hiccup
+      // forces an unnecessary ~6 s TeraBox API round-trip before each retry,
+      // which pushes the total retry window past the FUSE kernel read timeout.
+      if (/HTTP [45]/.test(msg)) {
+        this._dlinkCache.delete(fsId)
+      }
+      throw new Error(`TeraBox: download failed for "${filePath}": ${msg}`)
     }
 
     return { data: data.subarray(0, size), length: data.length }
