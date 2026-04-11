@@ -103,7 +103,7 @@ function parseArgs(): MountOptions | null {
 
 function usage(): void {
   console.log(
-    'Usage: udFuse [options] <mountPoint>\n' +
+    'Usage: unidisk [options] <mountPoint>\n' +
     '\n' +
     'Options:\n' +
     '  -d              Enable FUSE debug output.\n' +
@@ -113,9 +113,10 @@ function usage(): void {
     '                  ~/.unidisk/settings.json.\n' +
     '  -w              Enable write support.\n' +
     '\n' +
-    'Example:\n' +
-    '  npx tsx src/udFuse.ts -m Sample /tmp/mnt\n' +
-    '  npx tsx src/udFuse.ts -p myDropbox -w /tmp/mnt\n'
+    'Examples:\n' +
+    '  unidisk -m Sample -p profile.json /tmp/mnt\n' +
+    '  unidisk -p MyTeraBox /tmp/terabox\n' +
+    '  unidisk -p MyDropbox -w /tmp/dropbox\n'
   )
 }
 
