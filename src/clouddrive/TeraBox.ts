@@ -392,6 +392,8 @@ export class TeraBox extends EventEmitter implements StorageProvider {
     //   older: { data: { dlink: [{ fs_id, dlink }] } }
     const item = res.list?.[0] ?? res.data?.dlink?.[0]
     if (!item?.dlink) {
+      // Log the full response so we can identify the actual shape
+      console.error('[TeraBox] _getDlink unexpected response:', JSON.stringify(res, null, 2))
       throw new Error(`TeraBox: no dlink returned for fs_id=${fsId}`)
     }
 
