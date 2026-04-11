@@ -7,7 +7,8 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "setup:rpi": "node scripts/patch-fuse-native.js && npm rebuild fuse-native"
   },
   "author": "Wei-Lun Lee (Sean)",
   "dependencies": {
