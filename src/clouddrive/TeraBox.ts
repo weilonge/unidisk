@@ -210,9 +210,19 @@ export class TeraBox extends EventEmitter implements StorageProvider {
   }
 
   async getFileMeta(filePath: string): Promise<{ data: FileMetaData | null }> {
+    // Root always exists as a directory — no API call needed and the listing
+    // contains children, not the root entry itself.
+    if (filePath === '/') {
+      return {
+        data: {
+          list: [{ isdir: 1, path: '/', size: 0, mtime: Date.now(), ctime: Date.now() }],
+        },
+      }
+    }
+
     // Always list the parent directory; this populates _fsIdCache for the
     // file so getFileDownload can resolve the fs_id without extra API calls.
-    const dir = filePath === '/' ? '/' : path.dirname(filePath)
+    const dir = path.dirname(filePath)
     const listRes = await this.getFileList(dir)
 
     if (!listRes.data) return { data: null }
