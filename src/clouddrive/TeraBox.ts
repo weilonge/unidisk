@@ -134,7 +134,7 @@ function rangeGet(
       })
 
       req.on('error', reject)
-      req.setTimeout(15_000, () => {
+      req.setTimeout(HTTP_TIMEOUT_MS, () => {
         req.destroy(new Error('Request timed out'))
       })
     }
@@ -142,6 +142,31 @@ function rangeGet(
     doRequest(url, maxRedirects)
   })
 }
+
+// ---------------------------------------------------------------------------
+// TeraBox-specific constants
+// ---------------------------------------------------------------------------
+
+/** Socket idle timeout for each Range GET request. */
+const HTTP_TIMEOUT_MS = 15_000
+
+/** Maximum number of HTTP redirects to follow per Range GET. */
+const MAX_REDIRECTS = 10
+
+/**
+ * TeraBox dlinks are documented as valid for ~1 hour.  Cache for 50 minutes
+ * to stay comfortably within that window.
+ */
+const DLINK_TTL_MS = 50 * 60 * 1000
+
+/**
+ * CDN errno returned when TeraBox rate-limits a session ("need verify").
+ * Typically clears within 1–5 seconds.
+ */
+const ERRNO_NEED_VERIFY = 424629
+
+/** How long to wait before retrying after an ERRNO_NEED_VERIFY response. */
+const VERIFY_RETRY_DELAY_MS = 3_000
 
 // ---------------------------------------------------------------------------
 // Provider
@@ -266,7 +291,7 @@ export class TeraBox extends EventEmitter implements StorageProvider {
 
     let data: Buffer
     try {
-      data = await rangeGet(dlink, extraHeaders, 10)
+      data = await rangeGet(dlink, extraHeaders, MAX_REDIRECTS)
     } catch (err) {
       const msg = (err as Error).message
       // Evict the cached dlink only for HTTP auth/permission errors (4xx/5xx).
@@ -294,10 +319,10 @@ export class TeraBox extends EventEmitter implements StorageProvider {
         const parsed = JSON.parse(bodyText) as { errno?: number; errmsg?: string }
         if (typeof parsed.errno === 'number' && parsed.errno !== 0) {
           const msg = `TeraBox: CDN errno=${parsed.errno} "${parsed.errmsg ?? ''}" for "${filePath}"`
-          // errno=424629 ("need verify") is a per-session CDN throttle that
-          // clears within ~1–5 s.  Signal the retry loop to back off longer.
-          throw parsed.errno === 424629
-            ? new RetryableError(msg, 3000)
+          // ERRNO_NEED_VERIFY is a per-session CDN throttle that clears within
+          // ~1–5 s.  Signal the retry loop to back off longer.
+          throw parsed.errno === ERRNO_NEED_VERIFY
+            ? new RetryableError(msg, VERIFY_RETRY_DELAY_MS)
             : new Error(msg)
         }
       } catch (parseErr) {
@@ -430,7 +455,7 @@ export class TeraBox extends EventEmitter implements StorageProvider {
 
     this._dlinkCache.set(fsId, {
       url:       item.dlink,
-      expiresAt: Date.now() + 50 * 60 * 1000,  // 50 minutes
+      expiresAt: Date.now() + DLINK_TTL_MS,
     })
 
     return item.dlink
