@@ -27,10 +27,11 @@ export class Sample extends EventEmitter implements StorageProvider {
   private _writePendingData: Record<number, PendingWrite | null> = {}
 
   init(options: SampleProfile): void {
+    this._writePendingData = {}
+    if (!options.JSONPath) return   // allow empty filesystem (useful for tests / demos)
     this._jsonFileName = options.JSONPath
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     this._testData = require(this._jsonFileName) as SampleNode
-    this._writePendingData = {}
   }
 
   isIllegalFileName(filePath: string): boolean {
