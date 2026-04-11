@@ -8,11 +8,15 @@
  * The runner exits 0 (skip) when no credential is supplied so CI stays green.
  * It exits 1 on any assertion failure or unexpected error.
  *
- * Because real TeraBox account contents are unknown, the tests are adaptive:
- *   - Root listing must succeed and return something (or be empty — both valid).
- *   - If at least one file is found, we download its first 128 bytes.
- *   - If at least one subdirectory is found, we list it too.
- * No specific paths are hard-coded.
+ * Setup / teardown:
+ *   A uniquely-named test folder is created in the TeraBox account root before
+ *   the FUSE mount and deleted after unmount, regardless of test outcome.  No
+ *   other account data is modified.
+ *
+ * Because real TeraBox account contents are unknown, file tests are adaptive:
+ *   - Root listing must succeed (empty is fine).
+ *   - If at least one file is found anywhere, we download its first 128 bytes.
+ *   - If at least one subdirectory is found, we list it.
  */
 
 import fs from 'fs/promises'
@@ -28,16 +32,11 @@ import { buildHandlers } from '../src/udFuse'
 // ---------------------------------------------------------------------------
 
 function resolveNdus(): string | null {
-  // --ndus <value>
   const flagIdx = process.argv.indexOf('--ndus')
   if (flagIdx !== -1 && process.argv[flagIdx + 1]) {
     return process.argv[flagIdx + 1]
   }
-  // TERABOX_NDUS env var
-  if (process.env.TERABOX_NDUS) {
-    return process.env.TERABOX_NDUS
-  }
-  return null
+  return process.env.TERABOX_NDUS ?? null
 }
 
 // ---------------------------------------------------------------------------
@@ -92,7 +91,7 @@ function unmount(fuse: Fuse): Promise<void> {
 // Tests
 // ---------------------------------------------------------------------------
 
-async function runTests(mountPoint: string): Promise<void> {
+async function runTests(mountPoint: string, testFolderName: string): Promise<void> {
   console.log('\nTeraBox FUSE Integration Tests')
   console.log('===============================')
 
@@ -116,28 +115,46 @@ async function runTests(mountPoint: string): Promise<void> {
     assert(st.isDirectory(), 'mount point is a directory')
   }, 'stat on mount root succeeds')
 
-  // --- Adaptive: stat & read first file found in root ---
-  const firstFile = rootEntries.find(e => !e.startsWith('.'))
-  if (firstFile) {
-    const filePath = path.join(mountPoint, firstFile)
+  // --- Test folder: visible in listing, stat, readdir ---
+  console.log(`\ntest folder ("${testFolderName}")`)
+  assert(
+    rootEntries.includes(testFolderName),
+    `test folder appears in root listing`
+  )
+
+  const testFolderPath = path.join(mountPoint, testFolderName)
+  await assertNoThrow(async () => {
+    const st = await fs.stat(testFolderPath)
+    assert(st.isDirectory(), 'test folder is reported as a directory')
+  }, 'stat on test folder succeeds')
+
+  await assertNoThrow(async () => {
+    const entries = await fs.readdir(testFolderPath)
+    assert(entries.length === 0, 'test folder is empty')
+  }, 'readdir on test folder succeeds')
+
+  // --- Adaptive: stat & read first non-hidden entry in root ---
+  const firstEntry = rootEntries.find(e => !e.startsWith('.') && e !== testFolderName)
+  if (firstEntry) {
+    const entryPath = path.join(mountPoint, firstEntry)
 
     let isFile = false
     let isDir  = false
     const stResult = await assertNoThrow(async () => {
-      const st = await fs.stat(filePath)
+      const st = await fs.stat(entryPath)
       isFile = st.isFile()
       isDir  = st.isDirectory()
       return st
-    }, `stat("${firstFile}") succeeds`)
+    }, `stat("${firstEntry}") succeeds`)
 
     if (stResult !== undefined) {
-      assert(isFile || isDir, `"${firstFile}" is a file or directory`)
+      assert(isFile || isDir, `"${firstEntry}" is a file or directory`)
     }
 
     if (isFile) {
-      console.log(`\nreadFile("${firstFile}", first 128 bytes)`)
+      console.log(`\nreadFile("${firstEntry}", first 128 bytes)`)
       await assertNoThrow(async () => {
-        const fd = await fs.open(filePath, 'r')
+        const fd = await fs.open(entryPath, 'r')
         try {
           const buf = Buffer.alloc(128)
           const { bytesRead } = await fd.read(buf, 0, 128, 0)
@@ -145,20 +162,19 @@ async function runTests(mountPoint: string): Promise<void> {
         } finally {
           await fd.close()
         }
-      }, `partial read of "${firstFile}" succeeds`)
+      }, `partial read of "${firstEntry}" succeeds`)
     }
 
-    // --- Adaptive: list first subdirectory ---
     if (isDir) {
-      console.log(`\nreaddir("${firstFile}")`)
+      console.log(`\nreaddir("${firstEntry}")`)
       await assertNoThrow(async () => {
-        const subEntries = await fs.readdir(filePath)
-        console.log(`  (found ${subEntries.length} entries in "${firstFile}")`)
-        assert(Array.isArray(subEntries), `listing of "${firstFile}" returns an array`)
-      }, `readdir("${firstFile}") succeeds`)
+        const subEntries = await fs.readdir(entryPath)
+        console.log(`  (found ${subEntries.length} entries in "${firstEntry}")`)
+        assert(Array.isArray(subEntries), `listing of "${firstEntry}" returns an array`)
+      }, `readdir("${firstEntry}") succeeds`)
     }
   } else {
-    console.log('\n  (account root is empty — skipping file/dir tests)')
+    console.log('\n  (no other entries in root — skipping adaptive file/dir tests)')
   }
 
   // --- ENOENT for a path that cannot exist ---
@@ -184,7 +200,9 @@ async function main(): Promise<void> {
     process.exit(0)
   }
 
-  const MOUNT_POINT = path.join(os.tmpdir(), 'ud-terabox-fuse-test-mnt')
+  const MOUNT_POINT   = path.join(os.tmpdir(), 'ud-terabox-fuse-test-mnt')
+  const TEST_FOLDER   = `/__ud_test_${Date.now()}`
+  const TEST_FOLDER_NAME = path.basename(TEST_FOLDER)
 
   const provider = new TeraBox()
   provider.init({ ndus, cacheStore: 'memory' })
@@ -192,29 +210,40 @@ async function main(): Promise<void> {
   const udm = new UdManager()
   udm.init({
     provider,
-    profile: { ndus, cacheStore: 'memory' },
-    blockSize: 1024 * 1024,
-    blockWritingSize: 8 * 1024 * 1024,
-    fuseIoSize: 65536,
-    queueConcurrency: 3,
-    prefetchBlocks: 2,
+    profile:             { ndus, cacheStore: 'memory' },
+    blockSize:           1024 * 1024,
+    blockWritingSize:    8 * 1024 * 1024,
+    fuseIoSize:          65536,
+    queueConcurrency:    1,
+    prefetchBlocks:      2,
     maxDataCacheEntries: 20,
   })
 
-  const handlers = buildHandlers(udm, false)
+  // Create the test folder before mounting so we have something deterministic
+  // to assert on (verifies createFolder + that it shows up in the listing).
+  console.log(`Creating test folder ${TEST_FOLDER} …`)
+  await udm.createFolder(TEST_FOLDER)
 
   await fs.mkdir(MOUNT_POINT, { recursive: true })
   console.log(`Mounting TeraBox at ${MOUNT_POINT} …`)
 
-  const fuse = await mount(MOUNT_POINT, handlers)
-  // Give the kernel a moment to settle the mount
-  await new Promise(r => setTimeout(r, 500))
+  const fuse = await mount(MOUNT_POINT, buildHandlers(udm, false))
+  await new Promise(r => setTimeout(r, 500))  // let the kernel settle
 
   try {
-    await runTests(MOUNT_POINT)
+    await runTests(MOUNT_POINT, TEST_FOLDER_NAME)
   } finally {
     console.log('\nUnmounting …')
     await unmount(fuse)
+
+    // Always clean up, even when tests failed.
+    console.log(`Deleting test folder ${TEST_FOLDER} …`)
+    try {
+      await udm.deleteFolder(TEST_FOLDER)
+      console.log('  ✓ test folder deleted')
+    } catch (err) {
+      console.error(`  ✗ cleanup failed: ${(err as Error).message}`)
+    }
   }
 
   console.log('\n===============================')
