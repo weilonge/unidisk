@@ -1,0 +1,5 @@
+{
+  "module": "Sample",
+  "cacheStore": "memory",
+  "JSONPath": "./examples/sample-fs.json"
+}
