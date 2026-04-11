@@ -134,13 +134,6 @@ async function runTests(mountPoint: string): Promise<void> {
       assert(isFile || isDir, `"${firstFile}" is a file or directory`)
     }
 
-    // Read first 128 bytes of the first regular file in root
-    const firstRegularFile = rootEntries.find(async e => {
-      try {
-        return (await fs.stat(path.join(mountPoint, e))).isFile()
-      } catch { return false }
-    })
-
     if (isFile) {
       console.log(`\nreadFile("${firstFile}", first 128 bytes)`)
       await assertNoThrow(async () => {
