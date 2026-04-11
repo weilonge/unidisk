@@ -29,7 +29,8 @@ export class Sample extends EventEmitter implements StorageProvider {
   init(options: SampleProfile): void {
     this._writePendingData = {}
     if (!options.JSONPath) return   // allow empty filesystem (useful for tests / demos)
-    this._jsonFileName = options.JSONPath
+    // Resolve relative paths from CWD so profiles can use paths like "./examples/sample-fs.json"
+    this._jsonFileName = path.resolve(options.JSONPath)
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     this._testData = require(this._jsonFileName) as SampleNode
   }
