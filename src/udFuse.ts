@@ -342,7 +342,7 @@ async function main(): Promise<void> {
   const blockSize          = Settings.get('block_reading_size')   ?? 1024 * 1024
   const blockWritingSize   = Settings.get('block_writing_size')   ?? 8 * 1024 * 1024
   const fuseIoSize         = Settings.get('fuse_iosize')          ?? 65536
-  const queueConcurrency   = Settings.get('queue_concurrency')    ?? 3
+  const queueConcurrency   = Settings.get('queue_concurrency')    ?? 1
   const prefetchBlocks     = Settings.get('prefetch_blocks')      ?? 2
   const maxDataCacheEntries = Settings.get('max_data_cache_entry') ?? 20
 

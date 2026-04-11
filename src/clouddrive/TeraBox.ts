@@ -11,6 +11,7 @@ import type {
   DownloadResponse,
   QuotaInfo,
 } from '../types'
+import { RetryableError } from '../helper/RetryableError'
 
 /**
  * TeraBox cloud-storage provider.
@@ -133,7 +134,7 @@ function rangeGet(
       })
 
       req.on('error', reject)
-      req.setTimeout(60_000, () => {
+      req.setTimeout(15_000, () => {
         req.destroy(new Error('Request timed out'))
       })
     }
@@ -267,11 +268,42 @@ export class TeraBox extends EventEmitter implements StorageProvider {
     try {
       data = await rangeGet(dlink, extraHeaders, 10)
     } catch (err) {
-      // dlink may have expired — evict so next call gets a fresh one
-      this._dlinkCache.delete(fsId)
-      throw new Error(
-        `TeraBox: download failed for "${filePath}": ${(err as Error).message}`
+      const msg = (err as Error).message
+      // Evict the cached dlink only for HTTP auth/permission errors (4xx/5xx).
+      // Transient network failures (socket hang up, timeout, ETIMEDOUT) do NOT
+      // mean the dlink itself has expired — evicting it on every network hiccup
+      // forces an unnecessary ~6 s TeraBox API round-trip before each retry,
+      // which pushes the total retry window past the FUSE kernel read timeout.
+      if (/HTTP [45]/.test(msg)) {
+        this._dlinkCache.delete(fsId)
+      }
+      throw new Error(`TeraBox: download failed for "${filePath}": ${msg}`)
+    }
+
+    // If the CDN returned fewer bytes than requested it usually means it sent
+    // a throttle/error JSON body instead of file content.  Log the raw body,
+    // then surface the errno as a proper Error so the retry log is meaningful
+    // (e.g. "errno=424629 need verify") rather than "Block size mismatch".
+    if (data.length < size) {
+      const bodyText = data.slice(0, 300).toString('utf8')
+      logger.verbose(
+        `TeraBox: CDN short response for "${filePath}" @${offset}: ` +
+        `got ${data.length} B (wanted ${size} B) — body: ${bodyText}`
       )
+      try {
+        const parsed = JSON.parse(bodyText) as { errno?: number; errmsg?: string }
+        if (typeof parsed.errno === 'number' && parsed.errno !== 0) {
+          const msg = `TeraBox: CDN errno=${parsed.errno} "${parsed.errmsg ?? ''}" for "${filePath}"`
+          // errno=424629 ("need verify") is a per-session CDN throttle that
+          // clears within ~1–5 s.  Signal the retry loop to back off longer.
+          throw parsed.errno === 424629
+            ? new RetryableError(msg, 3000)
+            : new Error(msg)
+        }
+      } catch (parseErr) {
+        // Re-throw only errors we constructed above; ignore JSON parse failures.
+        if ((parseErr as Error).message.startsWith('TeraBox:')) throw parseErr
+      }
     }
 
     return { data: data.subarray(0, size), length: data.length }
