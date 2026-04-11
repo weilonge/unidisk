@@ -280,13 +280,26 @@ export class TeraBox extends EventEmitter implements StorageProvider {
     }
 
     // If the CDN returned fewer bytes than requested it usually means it sent
-    // a rate-limit / throttle error body (e.g. 70-byte JSON) instead of file
-    // content.  Log the body so we can identify the exact error code.
+    // a throttle/error JSON body instead of file content.  Log the raw body,
+    // then surface the errno as a proper Error so the retry log is meaningful
+    // (e.g. "errno=424629 need verify") rather than "Block size mismatch".
     if (data.length < size) {
+      const bodyText = data.slice(0, 300).toString('utf8')
       logger.verbose(
         `TeraBox: CDN short response for "${filePath}" @${offset}: ` +
-        `got ${data.length} B (wanted ${size} B) — body: ${data.slice(0, 300).toString('utf8')}`
+        `got ${data.length} B (wanted ${size} B) — body: ${bodyText}`
       )
+      try {
+        const parsed = JSON.parse(bodyText) as { errno?: number; errmsg?: string }
+        if (typeof parsed.errno === 'number' && parsed.errno !== 0) {
+          throw new Error(
+            `TeraBox: CDN errno=${parsed.errno} "${parsed.errmsg ?? ''}" for "${filePath}"`
+          )
+        }
+      } catch (parseErr) {
+        // Re-throw only errors we constructed above; ignore JSON parse failures.
+        if ((parseErr as Error).message.startsWith('TeraBox:')) throw parseErr
+      }
     }
 
     return { data: data.subarray(0, size), length: data.length }
