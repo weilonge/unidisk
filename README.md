@@ -4,7 +4,7 @@ This project can help you to use Cloud Storage in a new way and provide the foll
 
 *   Available storages
 
-    *   JSON FS, Dropbox
+    *   JSON FS, Dropbox, TeraBox
 
 *   Data/Meta Cache to improve response time
 
@@ -16,18 +16,59 @@ This project can help you to use Cloud Storage in a new way and provide the foll
 
 *   Download blocks in multi-threading
 
-*   Support Linux and MacOSX
+*   Support Linux and macOS (Intel and Apple Silicon)
+
+## Platform support
+
+unidisk uses [fuse-native](https://github.com/fuse-friends/fuse-native) for the FUSE layer.
+Prebuilt native binaries are included for macOS Intel and Linux x86_64.
+All other targets must build the native addon from source after installing the system FUSE library.
+
+| Platform | Architecture | Prebuilt? | Extra steps |
+|---|---|---|---|
+| macOS | Intel (x86_64) | Yes | Install [macFUSE](https://macfuse.io) |
+| macOS | Apple Silicon (arm64) | No | Install [macFUSE](https://macfuse.io), then `npm rebuild fuse-native` |
+| Linux | x86_64 | Yes | `sudo apt install libfuse2` |
+| Linux (Raspberry Pi) | arm64 / armv7l | No | See Raspberry Pi section below |
 
 ## Prerequisite
 
-### MacOSX
+### macOS (Intel)
 
-*   [OSXFUSE](http://osxfuse.github.io/)
-*   brew install pkg-config
+1. Install [macFUSE](https://macfuse.io) (download the `.pkg` from the releases page).
+2. Install pkg-config:
+   ~~~
+   brew install pkg-config
+   ~~~
 
-### Linux
+### macOS (Apple Silicon — M1/M2/M3)
 
-*   sudo apt-get install libfuse-dev
+1. Install [macFUSE](https://macfuse.io).
+2. Install Xcode Command Line Tools if not already present:
+   ~~~
+   xcode-select --install
+   ~~~
+3. Rebuild the native addon:
+   ~~~
+   npm rebuild fuse-native
+   ~~~
+
+### Linux (x86_64)
+
+~~~
+sudo apt install libfuse2
+~~~
+
+### Linux (Raspberry Pi — arm64 or armv7l)
+
+1. Install the FUSE development library and build tools:
+   ~~~
+   sudo apt install libfuse-dev build-essential
+   ~~~
+2. Rebuild the native addon:
+   ~~~
+   npm rebuild fuse-native
+   ~~~
 
 ### Prepare settings.json
 
@@ -39,60 +80,69 @@ $ mkdir ~/.unidisk && cp dist/settings.json.SAMPLE ~/.unidisk/settings.json
 
 ## Let's start
 
-unidisk supports three kinds of storage to access: SampleJSON FS and Dropbox. The following instructions will guide you how to use them.
+unidisk supports several storage backends. The general mount command is:
+
+~~~
+$ npx tsx src/udFuse.ts -m <Module> -p <profile.json> [mount point]
+~~~
+
+Add `-w` to enable write support (create/delete/move).
+
+### TeraBox
+
+1. Log in at terabox.com, open DevTools → Application → Cookies, and copy the `ndus` cookie value.
+   You can also run this in the browser console:
+   ~~~js
+   document.cookie.split('; ').find(c => c.startsWith('ndus='))?.split('=')[1]
+   ~~~
+
+2. Create a profile JSON file (e.g. `~/.unidisk/terabox.json`):
+   ~~~json
+   {
+     "module": "TeraBox",
+     "cacheStore": "disk",
+     "cachePath": "/tmp/terabox-cache",
+     "ndus": "<paste ndus value here>"
+   }
+   ~~~
+
+3. Mount:
+   ~~~
+   $ npx tsx src/udFuse.ts -m TeraBox -p ~/.unidisk/terabox.json ~/mnt/terabox
+   ~~~
 
 ### Sample JSON FS
 
-*   Please prepare a valid JSON file or get it from `dist/samplefs.json`
-*   Give the absolute path to `JSONPath` of `Sample` profile in `settings.json`
-*   Use the command to mount JSON FS with your sample JSON file:
-
-~~~
-$ ./udFuse.js -p Sample [mount point]
-~~~
-
-*   The storage is ready at the mount point you gave.
+*   Prepare a valid JSON file or use `examples/sample-fs.json`
+*   Create a profile pointing to it:
+   ~~~json
+   {
+     "module": "Sample",
+     "cacheStore": "memory",
+     "JSONPath": "/path/to/sample-fs.json"
+   }
+   ~~~
+*   Mount:
+   ~~~
+   $ npx tsx src/udFuse.ts -m Sample -p profile.json [mount point]
+   ~~~
 
 ### Dropbox
 
-*   Please apply a Dropbox development account , and keep your `API_KEY` and `API_SECRET`
-*   Use this command to get the authorization link and browser the link then login your account
-
-~~~
-$ ./ud.js Dropbox getAuthLink [API_KEY]
-== Result ====================
-{ authLink: 'https://www.dropbox.com/1/oauth2/authorize?client_id=API_KEY&response_type=code' }
-==============================
-~~~
-
-*   Keep `device_code` shown in the page after login and authrization:
-
-~~~
-QrlXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-~~~
-
-*   Use this command to get the `acess_token`:
-
-~~~
-$ ./ud.js Dropbox getAccessToken [API_KEY] [API_SECRET] [DEVICE_CODE]
-== Result ====================
-{ accessToken: 'QrlXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXYYYYYYYYYYYYYYYYYYYYYYYYYYYY' }
-==============================
-~~~
-
-*   Edit `~/.unidisk/settings.json` and add the line in your Dropbox profile (e.g. MyDropbox):
-
-~~~
-token: "QrlXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXYYYYYYYYYYYYYYYYYYYYYYYYYYYY"
-~~~
-
-*   Use this command to mount Dropbox:
-
-~~~
-$ ./udFuse.js -p MyDropbox [mount point]
-~~~
-
-*   The storage is ready at the mount point you gave.
+*   Apply for a Dropbox development account and obtain your `accessToken`.
+*   Create a profile:
+   ~~~json
+   {
+     "module": "Dropbox",
+     "cacheStore": "disk",
+     "cachePath": "/tmp/dropbox-cache",
+     "token": "<accessToken>"
+   }
+   ~~~
+*   Mount:
+   ~~~
+   $ npx tsx src/udFuse.ts -m Dropbox -p profile.json [mount point]
+   ~~~
 
 ## Reference
 
