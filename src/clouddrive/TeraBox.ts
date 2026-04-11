@@ -279,6 +279,16 @@ export class TeraBox extends EventEmitter implements StorageProvider {
       throw new Error(`TeraBox: download failed for "${filePath}": ${msg}`)
     }
 
+    // If the CDN returned fewer bytes than requested it usually means it sent
+    // a rate-limit / throttle error body (e.g. 70-byte JSON) instead of file
+    // content.  Log the body so we can identify the exact error code.
+    if (data.length < size) {
+      logger.verbose(
+        `TeraBox: CDN short response for "${filePath}" @${offset}: ` +
+        `got ${data.length} B (wanted ${size} B) — body: ${data.slice(0, 300).toString('utf8')}`
+      )
+    }
+
     return { data: data.subarray(0, size), length: data.length }
   }
 
