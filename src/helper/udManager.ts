@@ -3,6 +3,7 @@ import PQueue from 'p-queue'
 import { logger } from './logger'
 import { MetaCache } from './MetaCache'
 import { DataCache } from './DataCache'
+import { RetryableError } from './RetryableError'
 import type {
   StorageProvider,
   ProviderProfile,
@@ -258,15 +259,18 @@ export class UdManager extends EventEmitter {
     })
   }
 
-  // Generic retry wrapper with fixed delay.
+  // Generic retry wrapper.
+  // If the provider throws a RetryableError it can specify how long to wait;
+  // otherwise the default fixed delay is used.
   private async _fetchWithRetry<T>(fn: () => Promise<T>): Promise<T> {
     // eslint-disable-next-line no-constant-condition
     while (true) {
       try {
         return await fn()
       } catch (err) {
+        const delay = err instanceof RetryableError ? err.retryAfter : RETRY_DELAY_MS
         logger.error(`Retrying after error: ${err}`)
-        await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
+        await new Promise(r => setTimeout(r, delay))
       }
     }
   }
