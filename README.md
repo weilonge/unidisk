@@ -115,7 +115,22 @@ and named profiles.  The full set of keys with their defaults:
 }
 ```
 
-Any key can also be overridden per-profile in the profile JSON file.
+Global settings can also be placed directly in the profile JSON file instead of (or
+alongside) `~/.unidisk/settings.json`.  When `-p /path/to/profile.json` is used,
+unidisk reads settings from that file, so a single self-contained profile file is
+enough:
+
+```json
+{
+  "module":              "Dropbox",
+  "token":               "<accessToken>",
+  "cacheStore":          "disk",
+  "cachePath":           "/tmp/dropbox-cache",
+  "block_reading_size":  4194304,
+  "queue_concurrency":   2,
+  "prefetch_blocks":     3
+}
+```
 
 ---
 
@@ -126,6 +141,7 @@ unidisk [options] <mountPoint>
 
 Options:
   -m <module>   Provider name: Sample | Dropbox | TeraBox
+                Optional when the profile JSON already has a "module" field.
   -p <profile>  Path to a profile JSON file, or a named profile from
                 ~/.unidisk/settings.json
   -w            Enable write support (create / delete / move)
