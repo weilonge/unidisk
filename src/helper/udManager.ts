@@ -55,7 +55,6 @@ export class UdManager extends EventEmitter {
     this._writingBlockNum = options.blockWritingSize / options.fuseIoSize
 
     this._provider = options.provider
-    this._provider.init(options.profile)
 
     this._metaCache = new MetaCache()
     this._metaCache.init()

@@ -211,11 +211,11 @@ async function main(): Promise<void> {
   udm.init({
     provider,
     profile:             { token, cacheStore: 'memory' },
-    blockSize:           1024 * 1024,
+    blockSize:           4 * 1024 * 1024,
     blockWritingSize:    8 * 1024 * 1024,
     fuseIoSize:          65536,
-    queueConcurrency:    1,
-    prefetchBlocks:      2,
+    queueConcurrency:    2,
+    prefetchBlocks:      3,
     maxDataCacheEntries: 20,
   })
 

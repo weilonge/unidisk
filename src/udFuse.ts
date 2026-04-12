@@ -359,6 +359,11 @@ async function main(): Promise<void> {
     maxDataCacheEntries,
   })
 
+  logger.info(`  block_reading_size   : ${blockSize} bytes (${blockSize / 1024 / 1024} MiB)`)
+  logger.info(`  max_data_cache_entry : ${maxDataCacheEntries}`)
+  logger.info(`  queue_concurrency    : ${queueConcurrency}`)
+  logger.info(`  prefetch_blocks      : ${prefetchBlocks}`)
+
   const handlers = buildHandlers(udm, opts.writable)
 
   const fuseOpts: Record<string, unknown> = {
