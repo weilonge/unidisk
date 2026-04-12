@@ -38,6 +38,7 @@ interface MountOptions {
   profile: ProviderProfile
   writable: boolean
   debug: boolean
+  configPath?: string  // resolved path to the file used for Settings.load()
 }
 
 function parseArgs(): MountOptions | null {
@@ -73,12 +74,17 @@ function parseArgs(): MountOptions | null {
     const p = opts.profileName
     const isFilePath = p.endsWith('.json') || p.includes('/') || p.includes('\\')
     if (isFilePath) {
-      // Load profile directly from a JSON file
+      // Load profile directly from a JSON file.
+      // Also record the path so main() loads global settings (block_reading_size,
+      // queue_concurrency, etc.) from the same file rather than from
+      // ~/.unidisk/settings.json which may not have those keys.
+      const resolvedPath = path.resolve(p)
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const profile = require(path.resolve(p)) as ProviderProfile
-      opts.profile  = profile
-      opts.module   = opts.module ?? (profile as { module?: string }).module
-      opts.writable = opts.writable || !!(profile as { writable?: boolean }).writable
+      const profile = require(resolvedPath) as ProviderProfile
+      opts.profile    = profile
+      opts.module     = opts.module ?? (profile as { module?: string }).module
+      opts.writable   = opts.writable || !!(profile as { writable?: boolean }).writable
+      opts.configPath = resolvedPath
     } else {
       // Look up a named profile from ~/.unidisk/settings.json
       Settings.load()
@@ -334,8 +340,11 @@ async function main(): Promise<void> {
     process.exit(1)
   }
 
-  // Reload settings so get() calls below reflect the file on disk.
-  Settings.load()
+  // Load global settings from the same file the profile came from.
+  // For a named profile (-p MyDropbox) that is ~/.unidisk/settings.json.
+  // For a file-path profile (-p /path/to/dropbox.json) that is the profile
+  // file itself, which may contain block_reading_size, queue_concurrency, etc.
+  Settings.load(opts.configPath)
 
   logger.info(`Loading provider: ${opts.module}`)
   const provider = loadProvider(opts.module, opts.profile)
