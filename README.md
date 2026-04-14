@@ -2,7 +2,7 @@
 
 Mount cloud storage as a local filesystem using FUSE.
 
-**Supported providers:** TeraBox · Dropbox · JSON FS (local test filesystem)
+**Supported providers:** TeraBox · Dropbox · Box · JSON FS (local test filesystem)
 
 **Features:**
 - Read-only or read-write (create / delete / move)
@@ -185,6 +185,42 @@ Options:
 
 > **Tip (Raspberry Pi / slow connections):** set `"queue_concurrency": 1` in the
 > profile to avoid CDN throttle errors.
+
+---
+
+### Box
+
+1. Go to the [Box Developer Console](https://developer.box.com/console), create
+   an app (Custom App → User Authentication OAuth 2.0), then under
+   **Configuration → Developer Token** click **Generate Developer Token**.
+
+2. Create a profile, e.g. `~/.unidisk/box.json`:
+   ```json
+   {
+     "module": "Box",
+     "cacheStore": "disk",
+     "cachePath": "/tmp/box-cache",
+     "token": "<developer token>"
+   }
+   ```
+
+3. Mount:
+   ```
+   mkdir -p ~/mnt/box
+   unidisk -p ~/.unidisk/box.json ~/mnt/box
+   ```
+
+4. Unmount:
+   ```
+   fusermount -u ~/mnt/box        # Linux
+   umount ~/mnt/box               # macOS
+   ```
+
+> **Note:** Developer tokens expire after 60 minutes.  For long-running mounts
+> use a proper OAuth 2.0 refresh-token flow and supply a long-lived access token.
+
+> **Upload limit:** The simple upload path supports files up to ~50 MB.
+> Larger files require Box's chunked upload API (not yet implemented).
 
 ---
 
