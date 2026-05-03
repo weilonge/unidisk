@@ -2,7 +2,7 @@
 
 Mount cloud storage as a local filesystem using FUSE.
 
-**Supported providers:** TeraBox · Dropbox · Box · pCloud · JSON FS (local test filesystem)
+**Supported providers:** TeraBox · Dropbox · Box · pCloud · Google Drive · JSON FS (local test filesystem)
 
 **Features:**
 - Read-only or read-write (create / delete / move)
@@ -255,6 +255,47 @@ Options:
    fusermount -u ~/mnt/pcloud        # Linux
    umount ~/mnt/pcloud               # macOS
    ```
+
+---
+
+### Google Drive
+
+1. Go to the [Google OAuth 2.0 Playground](https://developers.google.com/oauthplayground):
+   - In the left panel under **Drive API v3**, tick
+     `https://www.googleapis.com/auth/drive`.
+   - Click **Authorize APIs**, sign in, then **Exchange authorization code for tokens**.
+   - Copy the **Access token** (valid for 1 hour).
+
+   For a long-lived token, create a project in the
+   [Google Cloud Console](https://console.cloud.google.com), enable the
+   **Google Drive API**, configure OAuth 2.0 credentials, and implement a
+   refresh-token flow.
+
+2. Create a profile, e.g. `~/.unidisk/gdrive.json`:
+   ```json
+   {
+     "module": "GoogleDrive",
+     "cacheStore": "disk",
+     "cachePath": "/tmp/gdrive-cache",
+     "token": "<access token>"
+   }
+   ```
+
+3. Mount:
+   ```
+   mkdir -p ~/mnt/gdrive
+   unidisk -p ~/.unidisk/gdrive.json ~/mnt/gdrive
+   ```
+
+4. Unmount:
+   ```
+   fusermount -u ~/mnt/gdrive        # Linux
+   umount ~/mnt/gdrive               # macOS
+   ```
+
+> **Note:** Google Workspace documents (Docs, Sheets, Slides, etc.) are
+> excluded from directory listings because they have no downloadable binary
+> content via the Drive files API.
 
 ---
 
