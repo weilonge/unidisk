@@ -2,7 +2,7 @@
 
 Mount cloud storage as a local filesystem using FUSE.
 
-**Supported providers:** TeraBox · Dropbox · Box · JSON FS (local test filesystem)
+**Supported providers:** TeraBox · Dropbox · Box · pCloud · JSON FS (local test filesystem)
 
 **Features:**
 - Read-only or read-write (create / delete / move)
@@ -221,6 +221,40 @@ Options:
 
 > **Upload limit:** The simple upload path supports files up to ~50 MB.
 > Larger files require Box's chunked upload API (not yet implemented).
+
+---
+
+### pCloud
+
+1. Go to the [pCloud App Console](https://my.pcloud.com/#page=developer&app=createapp),
+   create an app, then use the OAuth 2.0 authorization flow to obtain a long-lived
+   access token.  For quick testing you can also use the
+   [pCloud API Explorer](https://docs.pcloud.com/methods/) which lets you call
+   `userinfo?getauth=1` with your credentials to get a token.
+
+2. Create a profile, e.g. `~/.unidisk/pcloud.json`:
+   ```json
+   {
+     "module": "pCloud",
+     "cacheStore": "disk",
+     "cachePath": "/tmp/pcloud-cache",
+     "token": "<access token>"
+   }
+   ```
+   **EU-region accounts** must add `"apiHost": "eapi.pcloud.com"` (default is
+   `api.pcloud.com` for US accounts).
+
+3. Mount:
+   ```
+   mkdir -p ~/mnt/pcloud
+   unidisk -p ~/.unidisk/pcloud.json ~/mnt/pcloud
+   ```
+
+4. Unmount:
+   ```
+   fusermount -u ~/mnt/pcloud        # Linux
+   umount ~/mnt/pcloud               # macOS
+   ```
 
 ---
 
